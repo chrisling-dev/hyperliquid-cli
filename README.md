@@ -5,17 +5,7 @@ A command-line interface for [Hyperliquid DEX](https://hyperliquid.xyz/) built w
 ## Installation
 
 ```bash
-# Clone and install
-git clone <repo-url>
-cd hyperliquid-cli
-pnpm install
-
-# Build and link globally
-pnpm build
-pnpm link --global
-
-# Now 'hl' command is available globally
-hl --help
+npm install -g hyperliquid-cli
 ```
 
 ## Configuration
@@ -219,6 +209,24 @@ hl trade order $COIN $SIDE $SIZE $PRICE --json
 ```
 
 ## Development
+
+### Setup
+
+```bash
+# Clone and install
+git clone https://github.com/chrisling-dev/hyperliquid-cli.git
+cd hyperliquid-cli
+pnpm install
+
+# Build and link globally
+pnpm build
+pnpm link --global
+
+# Now 'hl' command is available globally
+hl --help
+```
+
+### Commands
 
 ```bash
 # Run without building

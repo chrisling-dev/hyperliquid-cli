@@ -1,15 +1,39 @@
 {
   "name": "hyperliquid-cli",
-  "version": "1.0.0",
+  "version": "0.0.1",
   "description": "CLI tool for Hyperliquid DEX",
+  "author": "Chris Ling",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/chrisling-dev/hyperliquid-cli.git"
+  },
+  "homepage": "https://github.com/chrisling-dev/hyperliquid-cli#readme",
+  "bugs": {
+    "url": "https://github.com/chrisling-dev/hyperliquid-cli/issues"
+  },
+  "keywords": [
+    "hyperliquid",
+    "cli",
+    "dex",
+    "trading",
+    "perpetuals",
+    "crypto"
+  ],
   "type": "module",
   "bin": {
     "hl": "./dist/index.js"
   },
+  "files": [
+    "dist",
+    "README.md",
+    "SKILLS.md"
+  ],
   "scripts": {
     "build": "tsc",
     "dev": "tsx src/index.ts",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "prepublishOnly": "pnpm build"
   },
   "dependencies": {
     "@nktkas/hyperliquid": "^0.30.2",
