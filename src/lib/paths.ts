@@ -15,3 +15,6 @@ export interface ServerConfig {
   testnet: boolean
   startedAt: number
 }
+
+// User config
+export const USER_CONFIG_PATH = join(HL_DIR, "config.json")

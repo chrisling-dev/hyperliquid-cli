@@ -50,3 +50,27 @@ export function validateTif(value: string): "Gtc" | "Ioc" | "Alo" {
   }
   return result;
 }
+
+export type Direction = "long" | "short" | "buy" | "sell";
+export type MarketType = "perp" | "spot";
+
+export interface DirectionInfo {
+  direction: Direction;
+  marketType: MarketType;
+  isBuy: boolean;
+}
+
+export function validateDirection(value: string): DirectionInfo {
+  const lower = value.toLowerCase();
+  const mapping: Record<string, DirectionInfo> = {
+    long: { direction: "long", marketType: "perp", isBuy: true },
+    short: { direction: "short", marketType: "perp", isBuy: false },
+    buy: { direction: "buy", marketType: "spot", isBuy: true },
+    sell: { direction: "sell", marketType: "spot", isBuy: false },
+  };
+  const result = mapping[lower];
+  if (!result) {
+    throw new Error('Direction must be "long", "short", "buy", or "sell"');
+  }
+  return result;
+}

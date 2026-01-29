@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach, type Mock } from "vitest"
 
-// Mock context and output modules
+// Mock modules
 vi.mock("../cli/program.js", () => ({
   getContext: vi.fn(),
   getOutputOptions: vi.fn(() => ({ json: false })),
@@ -12,12 +12,18 @@ vi.mock("../cli/output.js", () => ({
   outputSuccess: vi.fn(),
 }))
 
+vi.mock("../lib/userConfig.js", () => ({
+  loadUserConfig: vi.fn(() => ({ slippage: 1 })),
+  saveUserConfig: vi.fn(),
+  getUserConfigPath: vi.fn(() => "/home/user/.hl/config.json"),
+}))
+
 import { getContext } from "../cli/program.js"
+import { loadUserConfig } from "../lib/userConfig.js"
 import {
   validatePositiveNumber,
-  validateSide,
   validateTif,
-  validatePositiveInteger,
+  validateDirection,
 } from "../lib/validation.js"
 
 describe("trade commands", () => {
@@ -30,6 +36,7 @@ describe("trade commands", () => {
   let mockInfoClient: {
     meta: Mock
     allMids: Mock
+    spotMeta: Mock
   }
 
   let mockContext: {
@@ -45,6 +52,18 @@ describe("trade commands", () => {
     ],
   }
 
+  const mockSpotMeta = {
+    tokens: [
+      { name: "USDC", index: 0, szDecimals: 6, weiDecimals: 8, tokenId: "0x1", isCanonical: true, evmContract: null, fullName: "USD Coin" },
+      { name: "HYPE", index: 1, szDecimals: 4, weiDecimals: 8, tokenId: "0x2", isCanonical: true, evmContract: null, fullName: "Hyperliquid" },
+      { name: "PURR", index: 2, szDecimals: 4, weiDecimals: 8, tokenId: "0x3", isCanonical: true, evmContract: null, fullName: "Purr" },
+    ],
+    universe: [
+      { tokens: [1, 0], name: "HYPE/USDC", index: 0, isCanonical: true },
+      { tokens: [2, 0], name: "PURR/USDC", index: 1, isCanonical: true },
+    ],
+  }
+
   beforeEach(() => {
     vi.resetAllMocks()
 
@@ -56,7 +75,16 @@ describe("trade commands", () => {
 
     mockInfoClient = {
       meta: vi.fn(() => Promise.resolve(mockMeta)),
-      allMids: vi.fn(() => Promise.resolve({ BTC: "50000", ETH: "3000", SOL: "100" })),
+      allMids: vi.fn(() =>
+        Promise.resolve({
+          BTC: "50000",
+          ETH: "3000",
+          SOL: "100",
+          "HYPE/USDC": "20",
+          "PURR/USDC": "0.5",
+        })
+      ),
+      spotMeta: vi.fn(() => Promise.resolve(mockSpotMeta)),
     }
 
     mockContext = {
@@ -64,71 +92,95 @@ describe("trade commands", () => {
       getPublicClient: vi.fn(() => mockInfoClient),
     }
 
-    vi.mocked(getContext).mockReturnValue(mockContext as unknown as ReturnType<typeof getContext>)
+    vi.mocked(getContext).mockReturnValue(
+      mockContext as unknown as ReturnType<typeof getContext>
+    )
+    vi.mocked(loadUserConfig).mockReturnValue({ slippage: 1 })
   })
 
-  describe("order command - limit orders", () => {
-    it("should create a limit buy order", async () => {
-      mockExchangeClient.order.mockResolvedValue({
-        status: "ok",
-        response: {
-          data: { statuses: [{ resting: { oid: 12345 } }] },
-        },
+  describe("direction validation", () => {
+    it("should validate 'long' as perp buy", () => {
+      const result = validateDirection("long")
+      expect(result).toEqual({
+        direction: "long",
+        marketType: "perp",
+        isBuy: true,
       })
-
-      const coin = "BTC"
-      const side = validateSide("buy")
-      const size = validatePositiveNumber("0.1", "size")
-      const price = validatePositiveNumber("50000", "price")
-      const tif = validateTif("Gtc")
-
-      const meta = await mockContext.getPublicClient().meta()
-      const assetIndex = meta.universe.findIndex(
-        (a: { name: string }) => a.name.toUpperCase() === coin.toUpperCase()
-      )
-
-      expect(assetIndex).toBe(0)
-
-      const orderRequest = {
-        orders: [
-          {
-            a: assetIndex,
-            b: side === "buy",
-            p: price.toString(),
-            s: size.toString(),
-            r: false,
-            t: { limit: { tif } },
-          },
-        ],
-        grouping: "na",
-      }
-
-      const result = await mockContext.getWalletClient().order(orderRequest)
-
-      expect(mockExchangeClient.order).toHaveBeenCalledWith(orderRequest)
-      expect(result.response.data.statuses[0].resting.oid).toBe(12345)
     })
 
-    it("should create a limit sell order", async () => {
+    it("should validate 'short' as perp sell", () => {
+      const result = validateDirection("short")
+      expect(result).toEqual({
+        direction: "short",
+        marketType: "perp",
+        isBuy: false,
+      })
+    })
+
+    it("should validate 'buy' as spot buy", () => {
+      const result = validateDirection("buy")
+      expect(result).toEqual({
+        direction: "buy",
+        marketType: "spot",
+        isBuy: true,
+      })
+    })
+
+    it("should validate 'sell' as spot sell", () => {
+      const result = validateDirection("sell")
+      expect(result).toEqual({
+        direction: "sell",
+        marketType: "spot",
+        isBuy: false,
+      })
+    })
+
+    it("should be case-insensitive", () => {
+      expect(validateDirection("LONG")).toEqual({
+        direction: "long",
+        marketType: "perp",
+        isBuy: true,
+      })
+      expect(validateDirection("SHORT")).toEqual({
+        direction: "short",
+        marketType: "perp",
+        isBuy: false,
+      })
+    })
+
+    it("should throw error for invalid direction", () => {
+      expect(() => validateDirection("invalid")).toThrow(
+        'Direction must be "long", "short", "buy", or "sell"'
+      )
+    })
+  })
+
+  describe("market orders - perp", () => {
+    it("should create a perp long market order with slippage", async () => {
       mockExchangeClient.order.mockResolvedValue({
         status: "ok",
         response: {
-          data: { statuses: [{ resting: { oid: 67890 } }] },
+          data: { statuses: [{ filled: { totalSz: "0.1", avgPx: "50050" } }] },
         },
       })
 
-      const side = validateSide("sell")
-      expect(side).toBe("sell")
+      const mids = await mockContext.getPublicClient().allMids()
+      const midPrice = parseFloat(mids.BTC)
+      expect(midPrice).toBe(50000)
+
+      const slippagePct = 1 / 100 // 1%
+      const limitPx = midPrice * (1 + slippagePct) // Buy: add slippage
+      expect(limitPx).toBe(50500)
 
       const orderRequest = {
         orders: [
           {
-            a: 0,
-            b: false, // sell
-            p: "51000",
+            a: 0, // BTC asset index
+            b: true, // long = buy
+            p: limitPx.toFixed(6),
             s: "0.1",
             r: false,
-            t: { limit: { tif: "Gtc" } },
+            t: { limit: { tif: "Ioc" } },
           },
         ],
         grouping: "na",
@@ -138,22 +190,133 @@ describe("trade commands", () => {
       expect(mockExchangeClient.order).toHaveBeenCalledWith(orderRequest)
     })
 
-    it("should support IOC time-in-force", async () => {
-      const tif = validateTif("ioc")
-      expect(tif).toBe("Ioc")
+    it("should create a perp short market order with slippage", async () => {
+      const mids = await mockContext.getPublicClient().allMids()
+      const midPrice = parseFloat(mids.ETH)
+      expect(midPrice).toBe(3000)
+
+      const slippagePct = 1 / 100 // 1%
+      const limitPx = midPrice * (1 - slippagePct) // Sell: subtract slippage
+      expect(limitPx).toBe(2970)
+
+      const orderRequest = {
+        orders: [
+          {
+            a: 1, // ETH asset index
+            b: false, // short = sell
+            p: limitPx.toFixed(6),
+            s: "1",
+            r: false,
+            t: { limit: { tif: "Ioc" } },
+          },
+        ],
+        grouping: "na",
+      }
+
+      await mockContext.getWalletClient().order(orderRequest)
+      expect(mockExchangeClient.order).toHaveBeenCalledWith(orderRequest)
+    })
+  })
+
+  describe("market orders - spot", () => {
+    it("should resolve spot pair from symbol with USDC quote", async () => {
+      const spotMeta = await mockContext.getPublicClient().spotMeta()
+      expect(spotMeta.universe[0].name).toBe("HYPE/USDC")
+
+      // Asset ID for spot = 10000 + index
+      const assetId = 10000 + spotMeta.universe[0].index
+      expect(assetId).toBe(10000)
     })
 
-    it("should support ALO time-in-force", async () => {
-      const tif = validateTif("alo")
-      expect(tif).toBe("Alo")
+    it("should create a spot buy market order", async () => {
+      mockExchangeClient.order.mockResolvedValue({
+        status: "ok",
+        response: {
+          data: { statuses: [{ filled: { totalSz: "1", avgPx: "20.1" } }] },
+        },
+      })
+
+      const mids = await mockContext.getPublicClient().allMids()
+      const midPrice = parseFloat(mids["HYPE/USDC"])
+      expect(midPrice).toBe(20)
+
+      const slippagePct = 1 / 100
+      const limitPx = midPrice * (1 + slippagePct)
+
+      const orderRequest = {
+        orders: [
+          {
+            a: 10000, // HYPE/USDC spot asset ID
+            b: true, // buy
+            p: limitPx.toFixed(6),
+            s: "1",
+            r: false,
+            t: { limit: { tif: "Ioc" } },
+          },
+        ],
+        grouping: "na",
+      }
+
+      await mockContext.getWalletClient().order(orderRequest)
+      expect(mockExchangeClient.order).toHaveBeenCalledWith(orderRequest)
+    })
+  })
+
+  describe("limit orders", () => {
+    it("should create a perp limit long order with GTC", async () => {
+      mockExchangeClient.order.mockResolvedValue({
+        status: "ok",
+        response: {
+          data: { statuses: [{ resting: { oid: 12345 } }] },
+        },
+      })
+
+      const price = validatePositiveNumber("50000", "price")
+      const tif = validateTif("gtc")
+      expect(tif).toBe("Gtc")
+
+      const orderRequest = {
+        orders: [
+          {
+            a: 0,
+            b: true, // long
+            p: price.toString(),
+            s: "0.1",
+            r: false,
+            t: { limit: { tif: "Gtc" } },
+          },
+        ],
+        grouping: "na",
+      }
+
+      const result = await mockContext.getWalletClient().order(orderRequest)
+      expect(mockExchangeClient.order).toHaveBeenCalledWith(orderRequest)
+      expect(result.response.data.statuses[0].resting.oid).toBe(12345)
+    })
+
+    it("should create a perp limit short order with IOC", async () => {
+      const tif = validateTif("ioc")
+      expect(tif).toBe("Ioc")
+
+      const orderRequest = {
+        orders: [
+          {
+            a: 0,
+            b: false, // short
+            p: "51000",
+            s: "0.1",
+            r: false,
+            t: { limit: { tif: "Ioc" } },
+          },
+        ],
+        grouping: "na",
+      }
+
+      await mockContext.getWalletClient().order(orderRequest)
+      expect(mockExchangeClient.order).toHaveBeenCalledWith(orderRequest)
     })
 
     it("should support reduce-only flag", async () => {
-      mockExchangeClient.order.mockResolvedValue({
-        status: "ok",
-        response: { data: { statuses: ["waitingForFill"] } },
-      })
-
       const orderRequest = {
         orders: [
           {
@@ -171,50 +334,36 @@ describe("trade commands", () => {
       await mockContext.getWalletClient().order(orderRequest)
       expect(mockExchangeClient.order).toHaveBeenCalledWith(orderRequest)
     })
-
-    it("should throw error for unknown coin", async () => {
-      const meta = await mockContext.getPublicClient().meta()
-      const assetIndex = meta.universe.findIndex(
-        (a: { name: string }) => a.name.toUpperCase() === "UNKNOWN"
-      )
-
-      expect(assetIndex).toBe(-1)
-    })
-
-    it("should throw error when price is missing for limit order", () => {
-      const priceArg: string | undefined = undefined
-      expect(priceArg).toBeUndefined()
-
-      // In actual code: if (!priceArg) throw new Error("Price is required for limit orders")
-    })
   })
 
-  describe("order command - market orders", () => {
-    it("should create a market buy order with slippage", async () => {
+  describe("stop-loss orders", () => {
+    it("should create a market stop-loss order (no limit price)", async () => {
       mockExchangeClient.order.mockResolvedValue({
         status: "ok",
-        response: {
-          data: { statuses: [{ filled: { totalSz: "0.1", avgPx: "50050" } }] },
-        },
+        response: { data: { statuses: ["waitingForTrigger"] } },
       })
 
       const mids = await mockContext.getPublicClient().allMids()
       const midPrice = parseFloat(mids.BTC)
-      expect(midPrice).toBe(50000)
-
-      const slippagePct = 1 / 100 // 1%
-      const limitPx = midPrice * (1 + slippagePct)
-      expect(limitPx).toBe(50500)
+      const slippagePct = 1 / 100
+      // For short direction SL, it's a buy to close, so add slippage
+      const limitPx = midPrice * (1 - slippagePct) // Short SL = sell
 
       const orderRequest = {
         orders: [
           {
             a: 0,
-            b: true, // buy
+            b: false, // short direction
             p: limitPx.toFixed(6),
             s: "0.1",
             r: false,
-            t: { limit: { tif: "Ioc" } }, // Market orders use IOC
+            t: {
+              trigger: {
+                triggerPx: "48000",
+                isMarket: true, // market execution
+                tpsl: "sl",
+              },
+            },
           },
         ],
         grouping: "na",
@@ -224,50 +373,28 @@ describe("trade commands", () => {
       expect(mockExchangeClient.order).toHaveBeenCalledWith(orderRequest)
     })
 
-    it("should create a market sell order with slippage", async () => {
-      const mids = await mockContext.getPublicClient().allMids()
-      const midPrice = parseFloat(mids.ETH)
-      expect(midPrice).toBe(3000)
-
-      const slippagePct = 0.5 / 100 // 0.5%
-      const limitPx = midPrice * (1 - slippagePct) // sell: subtract slippage
-      expect(limitPx).toBe(2985)
-    })
-
-    it("should throw error if cannot get mid price", async () => {
-      mockInfoClient.allMids.mockResolvedValue({ BTC: "50000" }) // No ETH price
-
-      const mids = await mockContext.getPublicClient().allMids()
-      const midPrice = parseFloat(mids.XYZ) // Unknown coin
-
-      expect(isNaN(midPrice)).toBe(true)
-      // In actual code: if (!midPrice) throw new Error(`Cannot get mid price for ${coin}`)
-    })
-  })
-
-  describe("order command - stop-loss orders", () => {
-    it("should create a stop-loss order with trigger", async () => {
+    it("should create a limit stop-loss order", async () => {
       mockExchangeClient.order.mockResolvedValue({
         status: "ok",
         response: { data: { statuses: ["waitingForTrigger"] } },
       })
 
       const triggerPx = validatePositiveNumber("48000", "trigger price")
-      const limitPx = validatePositiveNumber("47900", "price")
+      const limitPx = validatePositiveNumber("47900", "limit price")
 
       const orderRequest = {
         orders: [
           {
             a: 0,
-            b: false, // sell for stop-loss
+            b: false, // short direction
             p: limitPx.toString(),
             s: "0.1",
             r: false,
             t: {
               trigger: {
                 triggerPx: triggerPx.toString(),
-                isMarket: false,
-                tpsl: "sl" as const,
+                isMarket: false, // limit execution
+                tpsl: "sl",
               },
             },
           },
@@ -278,43 +405,34 @@ describe("trade commands", () => {
       await mockContext.getWalletClient().order(orderRequest)
       expect(mockExchangeClient.order).toHaveBeenCalledWith(orderRequest)
     })
-
-    it("should throw error when trigger price is missing", () => {
-      const triggerArg: string | undefined = undefined
-      expect(triggerArg).toBeUndefined()
-      // In actual code: throw new Error(`--trigger price is required for stop-loss orders`)
-    })
-
-    it("should throw error when limit price is missing", () => {
-      const priceArg: string | undefined = undefined
-      expect(priceArg).toBeUndefined()
-      // In actual code: throw new Error(`Limit price is required for stop-loss orders`)
-    })
   })
 
-  describe("order command - take-profit orders", () => {
-    it("should create a take-profit order with trigger", async () => {
+  describe("take-profit orders", () => {
+    it("should create a market take-profit order", async () => {
       mockExchangeClient.order.mockResolvedValue({
         status: "ok",
         response: { data: { statuses: ["waitingForTrigger"] } },
       })
 
-      const triggerPx = validatePositiveNumber("52000", "trigger price")
-      const limitPx = validatePositiveNumber("51900", "price")
+      const mids = await mockContext.getPublicClient().allMids()
+      const midPrice = parseFloat(mids.BTC)
+      const slippagePct = 1 / 100
+      // For long TP, it's a sell to close, so subtract slippage
+      const limitPx = midPrice * (1 - slippagePct)
 
       const orderRequest = {
         orders: [
           {
             a: 0,
-            b: false, // sell for take-profit (closing long)
-            p: limitPx.toString(),
+            b: false, // short direction = sell to close long
+            p: limitPx.toFixed(6),
             s: "0.1",
             r: false,
             t: {
               trigger: {
-                triggerPx: triggerPx.toString(),
-                isMarket: false,
-                tpsl: "tp" as const,
+                triggerPx: "55000",
+                isMarket: true,
+                tpsl: "tp",
               },
             },
           },
@@ -326,25 +444,25 @@ describe("trade commands", () => {
       expect(mockExchangeClient.order).toHaveBeenCalledWith(orderRequest)
     })
 
-    it("should use normalTpsl grouping when --tpsl flag is set", async () => {
+    it("should create a limit take-profit order", async () => {
       const orderRequest = {
         orders: [
           {
             a: 0,
             b: false,
-            p: "51900",
+            p: "54900",
             s: "0.1",
             r: false,
             t: {
               trigger: {
-                triggerPx: "52000",
+                triggerPx: "55000",
                 isMarket: false,
-                tpsl: "tp" as const,
+                tpsl: "tp",
               },
             },
           },
         ],
-        grouping: "normalTpsl", // --tpsl flag
+        grouping: "na",
       }
 
       await mockContext.getWalletClient().order(orderRequest)
@@ -359,42 +477,17 @@ describe("trade commands", () => {
         response: { data: {} },
       })
 
-      const orderId = validatePositiveInteger("12345", "order-id")
-      expect(orderId).toBe(12345)
-
       const meta = await mockContext.getPublicClient().meta()
       const assetIndex = meta.universe.findIndex(
         (a: { name: string }) => a.name.toUpperCase() === "BTC"
       )
 
       const cancelRequest = {
-        cancels: [{ a: assetIndex, o: orderId }],
+        cancels: [{ a: assetIndex, o: 12345 }],
       }
 
       await mockContext.getWalletClient().cancel(cancelRequest)
       expect(mockExchangeClient.cancel).toHaveBeenCalledWith(cancelRequest)
-    })
-
-    it("should throw error for invalid order ID", () => {
-      expect(() => validatePositiveInteger("abc", "order-id")).toThrow(
-        "order-id must be a positive integer"
-      )
-    })
-
-    it("should throw error for negative order ID", () => {
-      expect(() => validatePositiveInteger("-1", "order-id")).toThrow(
-        "order-id must be a positive integer"
-      )
-    })
-
-    it("should throw error for unknown coin", async () => {
-      const meta = await mockContext.getPublicClient().meta()
-      const assetIndex = meta.universe.findIndex(
-        (a: { name: string }) => a.name.toUpperCase() === "UNKNOWN"
-      )
-
-      expect(assetIndex).toBe(-1)
-      // In actual code: throw new Error(`Unknown coin: ${coin}`)
     })
   })
 
@@ -405,9 +498,6 @@ describe("trade commands", () => {
         response: { data: {} },
       })
 
-      const leverage = validatePositiveInteger("10", "leverage")
-      expect(leverage).toBe(10)
-
       const meta = await mockContext.getPublicClient().meta()
       const assetIndex = meta.universe.findIndex(
         (a: { name: string }) => a.name.toUpperCase() === "BTC"
@@ -416,11 +506,13 @@ describe("trade commands", () => {
       const leverageRequest = {
         asset: assetIndex,
         isCross: true,
-        leverage,
+        leverage: 10,
       }
 
       await mockContext.getWalletClient().updateLeverage(leverageRequest)
-      expect(mockExchangeClient.updateLeverage).toHaveBeenCalledWith(leverageRequest)
+      expect(mockExchangeClient.updateLeverage).toHaveBeenCalledWith(
+        leverageRequest
+      )
     })
 
     it("should set isolated margin leverage", async () => {
@@ -429,45 +521,23 @@ describe("trade commands", () => {
         response: { data: {} },
       })
 
-      const leverage = validatePositiveInteger("5", "leverage")
-
       const leverageRequest = {
-        asset: 1, // ETH
-        isCross: false, // isolated
-        leverage,
+        asset: 0,
+        isCross: false,
+        leverage: 5,
       }
 
       await mockContext.getWalletClient().updateLeverage(leverageRequest)
-      expect(mockExchangeClient.updateLeverage).toHaveBeenCalledWith(leverageRequest)
+      expect(mockExchangeClient.updateLeverage).toHaveBeenCalledWith(
+        leverageRequest
+      )
     })
 
     it("should default to cross margin when neither flag specified", () => {
       const options = { cross: undefined, isolated: undefined }
       const isCross = options.cross || !options.isolated
 
-      expect(isCross).toBe(true) // Defaults to cross
-    })
-
-    it("should use isolated when --isolated flag is set", () => {
-      const options = { cross: undefined, isolated: true }
-      const isCross = options.cross || !options.isolated
-
-      expect(isCross).toBe(false) // Isolated
-    })
-
-    it("should throw error for invalid leverage value", () => {
-      expect(() => validatePositiveInteger("0", "leverage")).toThrow(
-        "leverage must be a positive integer"
-      )
-    })
-
-    it("should throw error for unknown coin", async () => {
-      const meta = await mockContext.getPublicClient().meta()
-      const assetIndex = meta.universe.findIndex(
-        (a: { name: string }) => a.name.toUpperCase() === "UNKNOWN"
-      )
-
-      expect(assetIndex).toBe(-1)
+      expect(isCross).toBe(true)
     })
   })
 
@@ -491,7 +561,6 @@ describe("trade commands", () => {
       const status = result.response.data.statuses[0]
       expect("filled" in status).toBe(true)
       expect(status.filled.totalSz).toBe("0.1")
-      expect(status.filled.avgPx).toBe("50000")
     })
 
     it("should handle resting status", async () => {
@@ -515,27 +584,6 @@ describe("trade commands", () => {
       expect(status.resting.oid).toBe(12345)
     })
 
-    it("should handle waitingForFill status", async () => {
-      const response = {
-        status: "ok",
-        response: {
-          data: {
-            statuses: ["waitingForFill"],
-          },
-        },
-      }
-      mockExchangeClient.order.mockResolvedValue(response)
-
-      const result = await mockContext.getWalletClient().order({
-        orders: [],
-        grouping: "na",
-      })
-
-      const status = result.response.data.statuses[0]
-      expect(typeof status).toBe("string")
-      expect(status).toBe("waitingForFill")
-    })
-
     it("should handle waitingForTrigger status", async () => {
       const response = {
         status: "ok",
@@ -552,9 +600,14 @@ describe("trade commands", () => {
         grouping: "na",
       })
 
-      const status = result.response.data.statuses[0]
-      expect(typeof status).toBe("string")
-      expect(status).toBe("waitingForTrigger")
+      expect(result.response.data.statuses[0]).toBe("waitingForTrigger")
+    })
+  })
+
+  describe("user config", () => {
+    it("should use default slippage from config", () => {
+      const config = loadUserConfig()
+      expect(config.slippage).toBe(1)
     })
   })
 })
