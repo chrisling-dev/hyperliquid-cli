@@ -16,8 +16,26 @@ export function registerInfoCommands(program: Command): void {
       const outputOpts = getOutputOptions(this)
 
       try {
-        const client = ctx.getPublicClient()
-        const mids = await client.allMids()
+        let mids: Record<string, string>
+
+        // Try server cache first
+        const serverClient = await ctx.getServerClient()
+        if (serverClient) {
+          try {
+            const { data } = await serverClient.getPrices()
+            mids = data
+            serverClient.close()
+          } catch {
+            // Fallback to HTTP
+            serverClient.close()
+            const client = ctx.getPublicClient()
+            mids = await client.allMids()
+          }
+        } else {
+          // No server, use HTTP
+          const client = ctx.getPublicClient()
+          mids = await client.allMids()
+        }
 
         if (options.pair) {
           const coin = options.pair.toUpperCase()
@@ -48,8 +66,27 @@ export function registerInfoCommands(program: Command): void {
       const outputOpts = getOutputOptions(this)
 
       try {
-        const client = ctx.getPublicClient()
-        const meta = await client.meta()
+        let meta: unknown
+
+        // Try server cache first
+        const serverClient = await ctx.getServerClient()
+        if (serverClient) {
+          try {
+            const { data } = await serverClient.getPerpMeta()
+            meta = data
+            serverClient.close()
+          } catch {
+            // Fallback to HTTP
+            serverClient.close()
+            const client = ctx.getPublicClient()
+            meta = await client.meta()
+          }
+        } else {
+          // No server, use HTTP
+          const client = ctx.getPublicClient()
+          meta = await client.meta()
+        }
+
         output(meta, outputOpts)
       } catch (err) {
         outputError(err instanceof Error ? err.message : String(err))
@@ -65,8 +102,26 @@ export function registerInfoCommands(program: Command): void {
       const outputOpts = getOutputOptions(this)
 
       try {
-        const client = ctx.getPublicClient()
-        const allPerpMetas = await client.allPerpMetas()
+        let allPerpMetas: unknown
+
+        // Try server cache first
+        const serverClient = await ctx.getServerClient()
+        if (serverClient) {
+          try {
+            const { data } = await serverClient.getPerpMeta()
+            allPerpMetas = data
+            serverClient.close()
+          } catch {
+            // Fallback to HTTP
+            serverClient.close()
+            const client = ctx.getPublicClient()
+            allPerpMetas = await client.allPerpMetas()
+          }
+        } else {
+          // No server, use HTTP
+          const client = ctx.getPublicClient()
+          allPerpMetas = await client.allPerpMetas()
+        }
 
         output(allPerpMetas, outputOpts)
       } catch (err) {
@@ -74,6 +129,7 @@ export function registerInfoCommands(program: Command): void {
         process.exit(1)
       }
     })
+
   info
     .command("markets")
     .description("Get full market data (prices, funding, open interest)")
@@ -82,9 +138,53 @@ export function registerInfoCommands(program: Command): void {
       const outputOpts = getOutputOptions(this)
 
       try {
-        const client = ctx.getPublicClient()
-        const data = await client.metaAndAssetCtxs()
-        const [meta, contexts] = data
+        type AssetCtx = {
+          dayNtlVlm: string
+          funding: string
+          impactPxs: string[] | null
+          markPx: string
+          midPx: string | null
+          openInterest: string
+          oraclePx: string
+          premium: string | null
+          prevDayPx: string
+          dayBaseVlm: string
+        }
+
+        let meta: { universe: Array<{ name: string; szDecimals: number; maxLeverage: number }> }
+        let contexts: AssetCtx[]
+
+        // Try server cache first
+        const serverClient = await ctx.getServerClient()
+        if (serverClient) {
+          try {
+            const [perpMetaResult, assetCtxsResult] = await Promise.all([
+              serverClient.getPerpMeta(),
+              serverClient.getAssetCtxs(),
+            ])
+            serverClient.close()
+
+            meta = perpMetaResult.data as typeof meta
+            // allDexsAssetCtxs returns { ctxs: [[dexName, AssetCtx[]], ...] }
+            // For main dex, find the entry with empty string or first entry
+            const ctxsData = assetCtxsResult.data as { ctxs: Array<[string, AssetCtx[]]> }
+            const mainDexEntry = ctxsData.ctxs.find(([dex]) => dex === "") || ctxsData.ctxs[0]
+            contexts = mainDexEntry ? mainDexEntry[1] : []
+          } catch {
+            // Fallback to HTTP
+            serverClient.close()
+            const client = ctx.getPublicClient()
+            const data = await client.metaAndAssetCtxs()
+            meta = data[0] as unknown as typeof meta
+            contexts = data[1] as unknown as AssetCtx[]
+          }
+        } else {
+          // No server, use HTTP
+          const client = ctx.getPublicClient()
+          const data = await client.metaAndAssetCtxs()
+          meta = data[0] as unknown as typeof meta
+          contexts = data[1] as unknown as AssetCtx[]
+        }
 
         const markets = meta.universe.map(
           (asset: { name: string; szDecimals: number; maxLeverage: number }, i: number) => ({
@@ -111,6 +211,7 @@ export function registerInfoCommands(program: Command): void {
       const outputOpts = getOutputOptions(this)
 
       try {
+        // Book always uses HTTP (needs fresh data)
         const client = ctx.getPublicClient()
         const book = await client.l2Book({ coin: coin.toUpperCase() })
         output(book, outputOpts)
@@ -136,6 +237,7 @@ export function registerInfoCommands(program: Command): void {
           user = ctx.getWalletAddress()
         }
 
+        // Positions always use HTTP (needs fresh user-specific data)
         const client = ctx.getPublicClient()
         const state = await client.clearinghouseState({ user })
 
@@ -202,6 +304,7 @@ export function registerInfoCommands(program: Command): void {
           user = ctx.getWalletAddress()
         }
 
+        // Orders always use HTTP (needs fresh user-specific data)
         const client = ctx.getPublicClient()
         const orders = await client.openOrders({ user })
 

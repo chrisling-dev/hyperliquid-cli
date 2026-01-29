@@ -25,6 +25,19 @@ export function createProgram(): Command {
       // Store context on the command for subcommands to access
       thisCommand.setOptionValue("_context", context);
       thisCommand.setOptionValue("_outputOptions", { json: opts.json });
+
+      // Store start time for timing
+      thisCommand.setOptionValue("_startTime", performance.now());
+    })
+    .hook("postAction", (thisCommand) => {
+      const opts = thisCommand.opts() as GlobalOptions;
+      const startTime = thisCommand.opts()._startTime as number | undefined;
+
+      // Only show timing for non-JSON output
+      if (!opts.json && startTime !== undefined) {
+        const duration = (performance.now() - startTime) / 1000;
+        console.log(`\nCompleted in ${duration.toFixed(2)}s`);
+      }
     });
 
   registerCommands(program);
