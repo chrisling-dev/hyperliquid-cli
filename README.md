@@ -2,6 +2,8 @@
 
 A command-line interface for [Hyperliquid DEX](https://hyperliquid.xyz/) built with the [@nktkas/hyperliquid](https://github.com/nktkas/hyperliquid) TypeScript SDK.
 
+Features a beautiful terminal UI with real-time watch modes powered by [Ink](https://github.com/vadimdemedes/ink).
+
 ## Installation
 
 ```bash
@@ -31,60 +33,92 @@ export HYPERLIQUID_WALLET_ADDRESS=0x...
 
 ## Commands
 
-### Info Commands (Read-only, no authentication required)
+### Account Commands
 
-#### Get Prices
+View account information with optional real-time watch mode.
 
-```bash
-# All assets
-hl info prices
-
-# Specific asset
-hl info prices --pair BTC
-
-# JSON output
-hl info prices --pair ETH --json
-```
-
-#### Get Asset Metadata
+#### Get Positions
 
 ```bash
-hl info meta
-hl info allPerpMetas
-```
+# One-time fetch
+hl account positions
 
-#### Get Full Market Data
+# Watch mode - real-time updates with colored PnL
+hl account positions -w
 
-```bash
-# Includes prices, funding rates, open interest
-hl info markets
-```
-
-#### Get Order Book
-
-```bash
-hl info book BTC
-hl info book ETH --json
-```
-
-#### Get Account Positions
-
-```bash
-# Using configured wallet
-hl info positions
-
-# Using specific address
-hl info positions --user 0x...
+# Specific address
+hl account positions --user 0x...
 ```
 
 #### Get Open Orders
 
 ```bash
-# Using configured wallet
-hl info orders
+hl account orders
+hl account orders --user 0x...
 
-# Using specific address
-hl info orders --user 0x...
+# Watch mode - real-time order updates
+hl account orders -w
+```
+
+#### Get Balances
+
+```bash
+# Spot + perps balances
+hl account balances
+
+# Watch mode
+hl account balances -w
+```
+
+#### Get Full Portfolio
+
+```bash
+# Positions + spot balances combined
+hl account portfolio
+
+# Watch mode
+hl account portfolio -w
+```
+
+### Markets Commands
+
+View market information.
+
+#### List All Markets
+
+```bash
+# List all perpetual and spot markets
+hl markets ls
+```
+
+#### Get All Prices
+
+```bash
+hl markets prices
+```
+
+### Asset Commands
+
+View asset-specific information with optional watch mode.
+
+#### Get Price
+
+```bash
+# One-time fetch
+hl asset price BTC
+
+# Watch mode - real-time price updates
+hl asset price BTC -w
+```
+
+#### Get Order Book
+
+```bash
+# One-time fetch with depth visualization
+hl asset book BTC
+
+# Watch mode - real-time order book
+hl asset book ETH -w
 ```
 
 ### Trade Commands (Requires authentication)
@@ -173,24 +207,37 @@ hl referral status
 export HYPERLIQUID_PRIVATE_KEY=0x...
 
 # Check positions on testnet
-hl --testnet info positions
+hl --testnet account positions
 
 # Place a testnet order
 hl --testnet trade order BTC buy 0.001 50000
+```
+
+### Real-Time Monitoring
+
+```bash
+# Watch positions with live PnL
+hl account positions -w
+
+# Watch order book with depth visualization
+hl asset book BTC -w
+
+# Watch specific asset price
+hl asset price ETH -w
 ```
 
 ### Scripting with JSON Output
 
 ```bash
 # Get BTC price
-BTC_PRICE=$(hl info prices --pair BTC --json | jq -r '.price')
+BTC_PRICE=$(hl asset price BTC --json | jq -r '.price')
 echo "BTC: $BTC_PRICE"
 
 # Get all positions as JSON
-hl info positions --json | jq '.positions[] | {coin, size, pnl: .unrealizedPnl}'
+hl account positions --json | jq '.positions[] | {coin, size, pnl: .unrealizedPnl}'
 
 # Check open orders
-hl info orders --json | jq '.[] | select(.coin == "BTC")'
+hl account orders --json | jq '.[] | select(.coin == "BTC")'
 ```
 
 ### Automated Trading
@@ -230,13 +277,19 @@ hl --help
 
 ```bash
 # Run without building
-pnpm dev -- info prices
+pnpm dev -- account positions
 
 # Type check
 pnpm typecheck
 
 # Build
 pnpm build
+
+# Run tests
+pnpm test
+
+# Lint
+pnpm lint
 ```
 
 ## Project Structure
@@ -245,21 +298,43 @@ pnpm build
 hyperliquid-cli/
 ├── package.json
 ├── tsconfig.json
-├── .env.example
 ├── src/
 │   ├── index.ts                    # Entry point
 │   ├── cli/
 │   │   ├── program.ts              # Commander program setup
 │   │   ├── context.ts              # CLI context (clients, config)
-│   │   └── output.ts               # Output formatting (JSON/text)
+│   │   ├── output.ts               # Output formatting (JSON/text)
+│   │   ├── watch.ts                # Watch mode utilities
+│   │   └── ink/                    # Ink TUI components
+│   │       ├── theme.ts            # Color theme
+│   │       ├── render.tsx          # Render utilities
+│   │       └── components/         # React components
+│   │           ├── Table.tsx
+│   │           ├── PnL.tsx
+│   │           ├── WatchHeader.tsx
+│   │           └── Spinner.tsx
 │   ├── commands/
 │   │   ├── index.ts                # Command registration
-│   │   ├── referral.ts             # referral set/status
-│   │   ├── info.ts                 # prices, meta, markets, positions, orders, book
-│   │   └── trade.ts                # order, cancel, leverage
-│   └── lib/
-│       ├── config.ts               # Environment config
-│       └── validation.ts           # Input validation
+│   │   ├── account/                # positions, orders, balances, portfolio
+│   │   ├── markets/                # ls, prices
+│   │   ├── asset/                  # price, book
+│   │   ├── referral/               # set, status
+│   │   ├── trade.ts                # order, cancel, leverage
+│   │   └── server.ts               # start, stop, status
+│   ├── lib/
+│   │   ├── config.ts               # Environment config
+│   │   ├── validation.ts           # Input validation
+│   │   ├── position-watcher.ts     # WebSocket position watcher
+│   │   ├── balance-watcher.ts      # Balance watcher
+│   │   ├── portfolio-watcher.ts    # Portfolio watcher
+│   │   ├── price-watcher.ts        # Price watcher
+│   │   └── book-watcher.ts         # Order book watcher
+│   ├── client/
+│   │   └── index.ts                # Server client
+│   └── server/
+│       ├── index.ts                # Background server
+│       ├── cache.ts                # Data cache
+│       └── subscriptions.ts        # WebSocket subscriptions
 ```
 
 ## License

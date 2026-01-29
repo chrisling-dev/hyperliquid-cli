@@ -11,6 +11,7 @@
     "forceConsistentCasingInFileNames": true,
     "declaration": true,
     "resolveJsonModule": true,
+    "jsx": "react-jsx",
     "types": ["node", "vitest/globals"]
   },
   "include": ["src/**/*"],

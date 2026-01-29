@@ -79,3 +79,47 @@ export function outputError(message: string): void {
 export function outputSuccess(message: string): void {
   console.log(message);
 }
+
+/**
+ * Format an array of objects as a table string (for watch mode display)
+ * Returns the formatted string instead of printing to console
+ */
+export function formatArrayAsTable(arr: unknown[]): string {
+  if (arr.length === 0) {
+    return "(empty)"
+  }
+
+  const first = arr[0]
+  if (typeof first !== "object" || first === null) {
+    return arr.map(String).join("\n")
+  }
+
+  const keys = Object.keys(first)
+  const widths = keys.map((k) =>
+    Math.max(
+      k.length,
+      ...arr.map((item) => {
+        const val = (item as Record<string, unknown>)[k]
+        return String(val ?? "").length
+      }),
+    ),
+  )
+
+  const lines: string[] = []
+
+  // Header
+  lines.push(keys.map((k, i) => k.padEnd(widths[i])).join("  "))
+  // Separator
+  lines.push(widths.map((w) => "-".repeat(w)).join("  "))
+
+  // Rows
+  for (const item of arr) {
+    const row = keys.map((k, i) => {
+      const val = (item as Record<string, unknown>)[k]
+      return String(val ?? "").padEnd(widths[i])
+    })
+    lines.push(row.join("  "))
+  }
+
+  return lines.join("\n")
+}

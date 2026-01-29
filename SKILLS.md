@@ -7,7 +7,7 @@ This document describes how AI agents can use the `hl` command-line tool to inte
 The `hl` CLI provides programmatic access to Hyperliquid perpetual futures trading. Use this tool when users want to:
 
 - Check cryptocurrency prices, market data, or order books
-- View trading positions or open orders
+- View trading positions, balances, or open orders
 - Place limit, market, stop-loss, or take-profit orders
 - Cancel orders or adjust leverage
 - Manage referral codes
@@ -29,69 +29,21 @@ All commands support these options:
 | `--json` | Output structured JSON (recommended for parsing) |
 | `--testnet` | Use Hyperliquid testnet |
 
-### Info Commands (No Authentication Required)
+### Account Commands (No Authentication Required for Read)
 
-#### `hl info prices`
+#### `hl account positions`
 
-Get current mid prices for all or specific assets.
-
-```bash
-# Get all prices
-hl info prices --json
-
-# Get specific asset price
-hl info prices --pair BTC --json
-```
-
-**Output (JSON):**
-```json
-{"coin": "BTC", "price": "89500.0"}
-```
-
-#### `hl info meta`
-
-Get asset metadata including decimals and max leverage.
+Get account positions with real-time watch mode.
 
 ```bash
-hl info meta --json
-```
+# One-time fetch
+hl account positions --json
 
-#### `hl info allPerpMetas`
+# Watch mode - real-time updates
+hl account positions -w
 
-Get all perpetual market metadata.
-
-```bash
-hl info allPerpMetas --json
-```
-
-#### `hl info markets`
-
-Get comprehensive market data including funding rates and open interest.
-
-```bash
-hl info markets --json
-```
-
-**Output includes:** coin, szDecimals, maxLeverage, funding, openInterest, markPx, midPx, oraclePx, dayNtlVlm
-
-#### `hl info book <coin>`
-
-Get order book for a specific asset.
-
-```bash
-hl info book BTC --json
-```
-
-#### `hl info positions`
-
-Get account positions.
-
-```bash
-# With configured wallet
-hl info positions --json
-
-# With specific address (read-only)
-hl info positions --user 0x... --json
+# Specific address (read-only)
+hl account positions --user 0x... --json
 ```
 
 **Output (JSON):**
@@ -103,20 +55,137 @@ hl info positions --user 0x... --json
       "size": "0.001",
       "entryPx": "85000.0",
       "unrealizedPnl": "45.0",
-      "leverage": {"type": "cross", "value": 10}
+      "leverage": "10x cross"
     }
   ],
   "marginSummary": {"accountValue": "1000.0", "totalMarginUsed": "85.0"}
 }
 ```
 
-#### `hl info orders`
+#### `hl account orders`
 
-Get open orders.
+Get open orders with real-time watch mode.
 
 ```bash
-hl info orders --json
-hl info orders --user 0x... --json
+# One-time fetch
+hl account orders --json
+hl account orders --user 0x... --json
+
+# Watch mode - real-time updates
+hl account orders -w
+```
+
+#### `hl account balances`
+
+Get spot and perpetuals USD balances.
+
+```bash
+# One-time fetch
+hl account balances --json
+
+# Watch mode
+hl account balances -w
+```
+
+**Output (JSON):**
+```json
+{
+  "spotBalances": [
+    {"token": "USDC", "total": "1000.0", "hold": "0", "available": "1000.0"}
+  ],
+  "perpBalance": "5000.0"
+}
+```
+
+#### `hl account portfolio`
+
+Get full portfolio (positions + spot balances combined).
+
+```bash
+# One-time fetch
+hl account portfolio --json
+
+# Watch mode
+hl account portfolio -w
+```
+
+### Markets Commands (No Authentication Required)
+
+#### `hl markets ls`
+
+List all available markets (perpetuals and spot).
+
+```bash
+hl markets ls --json
+```
+
+**Output (JSON):**
+```json
+{
+  "perpMarkets": [
+    {"coin": "BTC", "maxLeverage": 50, "szDecimals": 5}
+  ],
+  "spotMarkets": [
+    {"name": "HYPE/USDC", "baseCoin": "HYPE", "quoteCoin": "USDC"}
+  ]
+}
+```
+
+#### `hl markets prices`
+
+Get mid prices for all assets.
+
+```bash
+hl markets prices --json
+```
+
+**Output (JSON):**
+```json
+[
+  {"coin": "BTC", "price": "89500.0"},
+  {"coin": "ETH", "price": "3200.0"}
+]
+```
+
+### Asset Commands (No Authentication Required)
+
+#### `hl asset price <coin>`
+
+Get price of a specific asset with optional watch mode.
+
+```bash
+# One-time fetch
+hl asset price BTC --json
+
+# Watch mode - real-time price updates
+hl asset price BTC -w
+```
+
+**Output (JSON):**
+```json
+{"coin": "BTC", "price": "89500.0"}
+```
+
+#### `hl asset book <coin>`
+
+Get order book for a specific asset with depth visualization.
+
+```bash
+# One-time fetch
+hl asset book BTC --json
+
+# Watch mode - real-time order book
+hl asset book BTC -w
+```
+
+**Output (JSON):**
+```json
+{
+  "levels": [
+    [{"px": "89500", "sz": "1.5", "n": 3}],
+    [{"px": "89501", "sz": "2.0", "n": 5}]
+  ]
+}
 ```
 
 ### Trade Commands (Authentication Required)
@@ -215,13 +284,30 @@ hl referral status --json
 
 ```bash
 # 1. Get current price
-hl info prices --pair BTC --json
+hl asset price BTC --json
 
 # 2. Check order book depth
-hl info book BTC --json
+hl asset book BTC --json
 
-# 3. Review funding rate
-hl info markets --json | jq '.[] | select(.coin == "BTC") | {funding, openInterest}'
+# 3. Review all markets
+hl markets ls --json
+```
+
+### Monitor Positions in Real-Time
+
+```bash
+# Watch positions with live PnL updates
+hl account positions -w
+
+# Or watch full portfolio
+hl account portfolio -w
+```
+
+### Watch Order Book
+
+```bash
+# Real-time order book with depth visualization
+hl asset book BTC -w
 ```
 
 ### Open a Position
@@ -234,14 +320,14 @@ hl trade leverage BTC 5 --json
 hl trade order BTC buy 0.01 85000 --json
 
 # 3. Verify order placed
-hl info orders --json
+hl account orders --json
 ```
 
 ### Close a Position
 
 ```bash
 # 1. Check current position
-hl info positions --json
+hl account positions --json
 
 # 2. Close with market order
 hl trade order BTC sell 0.01 --type market --reduce-only --json
@@ -263,7 +349,7 @@ hl trade order BTC sell 0.01 90500 --type take-profit --trigger 90000 --tpsl --j
 
 ```bash
 # Get all order IDs for BTC
-ORDERS=$(hl info orders --json | jq -r '.[] | select(.coin == "BTC") | .oid')
+ORDERS=$(hl account orders --json | jq -r '.[] | select(.coin == "BTC") | .oid')
 
 # Cancel each order
 for oid in $ORDERS; do
@@ -289,12 +375,13 @@ Common errors:
 ## Tips for AI Agents
 
 1. **Always use `--json`** for reliable parsing
-2. **Check prices first** before placing orders to validate parameters
-3. **Use `jq`** to filter and extract specific fields from JSON output
-4. **Validate coin symbols** using `hl info meta --json` to get valid asset names
-5. **For testnet testing**, always add `--testnet` flag
-6. **Handle errors gracefully** - check exit codes and stderr
-7. **Market orders use IOC** with slippage - may partially fill or fail in low liquidity
+2. **Use watch mode (`-w`)** for real-time monitoring without polling
+3. **Check prices first** before placing orders to validate parameters
+4. **Use `jq`** to filter and extract specific fields from JSON output
+5. **Validate coin symbols** using `hl markets ls --json` to get valid asset names
+6. **For testnet testing**, always add `--testnet` flag
+7. **Handle errors gracefully** - check exit codes and stderr
+8. **Market orders use IOC** with slippage - may partially fill or fail in low liquidity
 
 ## Asset Symbol Reference
 
@@ -302,5 +389,5 @@ Common perpetual assets: BTC, ETH, SOL, AVAX, BNB, ARB, OP, DOGE, MATIC, ATOM, L
 
 Get full list:
 ```bash
-hl info meta --json | jq '.universe[].name'
+hl markets ls --json | jq '.perpMarkets[].coin'
 ```
