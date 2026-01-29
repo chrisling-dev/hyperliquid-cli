@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from "vitest"
+import { describe, it, expect, vi, beforeEach, type Mock } from "vitest"
 
 // Mock context and output modules
 vi.mock("../cli/program.js", () => ({
@@ -16,17 +16,17 @@ import { getContext } from "../cli/program.js"
 
 describe("referral commands", () => {
   let mockExchangeClient: {
-    setReferrer: ReturnType<typeof vi.fn>
+    setReferrer: Mock
   }
 
   let mockInfoClient: {
-    referral: ReturnType<typeof vi.fn>
+    referral: Mock
   }
 
   let mockContext: {
-    getWalletClient: ReturnType<typeof vi.fn>
-    getPublicClient: ReturnType<typeof vi.fn>
-    getWalletAddress: ReturnType<typeof vi.fn>
+    getWalletClient: Mock
+    getPublicClient: Mock
+    getWalletAddress: Mock
   }
 
   beforeEach(() => {
@@ -46,7 +46,7 @@ describe("referral commands", () => {
       getWalletAddress: vi.fn(() => "0x1234567890abcdef1234567890abcdef12345678"),
     }
 
-    vi.mocked(getContext).mockReturnValue(mockContext as any)
+    vi.mocked(getContext).mockReturnValue(mockContext as unknown as ReturnType<typeof getContext>)
   })
 
   describe("set command", () => {

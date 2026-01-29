@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from "vitest"
+import { describe, it, expect, vi, beforeEach } from "vitest"
 import { existsSync, readFileSync } from "node:fs"
 
 // Mock fs module
@@ -20,7 +20,7 @@ vi.mock("../cli/output.js", () => ({
   outputSuccess: vi.fn(),
 }))
 
-import { isServerRunning, ServerClient } from "../client/index.js"
+import { isServerRunning } from "../client/index.js"
 
 describe("server commands", () => {
   beforeEach(() => {
@@ -44,7 +44,7 @@ describe("server commands", () => {
       vi.mocked(readFileSync).mockReturnValue("99999")
 
       // In actual code, process.kill(pid, 0) would throw if process doesn't exist
-      const checkProcessAlive = (pid: number) => {
+      const checkProcessAlive = (_pid: number) => {
         // Simulate process not found
         throw new Error("ESRCH")
       }

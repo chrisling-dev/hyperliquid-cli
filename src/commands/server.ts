@@ -7,9 +7,7 @@ import { getOutputOptions } from "../cli/program.js"
 import { output, outputError, outputSuccess } from "../cli/output.js"
 import {
   SERVER_PID_PATH,
-  SERVER_CONFIG_PATH,
   SERVER_LOG_PATH,
-  type ServerConfig,
 } from "../lib/paths.js"
 import { ServerClient, isServerRunning } from "../client/index.js"
 

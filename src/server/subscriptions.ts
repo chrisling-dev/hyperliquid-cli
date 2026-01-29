@@ -47,7 +47,7 @@ export class SubscriptionManager {
 
     // Subscribe to allMids
     this.log("Subscribing to allMids...")
-    const midsSub = await this.subscriptionClient.allMids((event) => {
+    const midsSub = await this.subscriptionClient.allMids({ dex: "ALL_DEXS" }, (event) => {
       this.cache.setAllMids(event.mids as AllMidsData)
     })
     this.subscriptions.push(midsSub)

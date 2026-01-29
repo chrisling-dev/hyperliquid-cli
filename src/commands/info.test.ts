@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from "vitest"
+import { describe, it, expect, vi, beforeEach, type Mock } from "vitest"
 
 // Mock context and output modules
 vi.mock("../cli/program.js", () => ({
@@ -11,31 +11,30 @@ vi.mock("../cli/output.js", () => ({
   outputError: vi.fn(),
 }))
 
-import { getContext, getOutputOptions } from "../cli/program.js"
-import { output, outputError } from "../cli/output.js"
+import { getContext } from "../cli/program.js"
 
 describe("info commands", () => {
   let mockInfoClient: {
-    allMids: ReturnType<typeof vi.fn>
-    meta: ReturnType<typeof vi.fn>
-    allPerpMetas: ReturnType<typeof vi.fn>
-    metaAndAssetCtxs: ReturnType<typeof vi.fn>
-    l2Book: ReturnType<typeof vi.fn>
-    clearinghouseState: ReturnType<typeof vi.fn>
-    openOrders: ReturnType<typeof vi.fn>
+    allMids: Mock
+    meta: Mock
+    allPerpMetas: Mock
+    metaAndAssetCtxs: Mock
+    l2Book: Mock
+    clearinghouseState: Mock
+    openOrders: Mock
   }
 
   let mockServerClient: {
-    getPrices: ReturnType<typeof vi.fn>
-    getPerpMeta: ReturnType<typeof vi.fn>
-    getAssetCtxs: ReturnType<typeof vi.fn>
-    close: ReturnType<typeof vi.fn>
+    getPrices: Mock
+    getPerpMeta: Mock
+    getAssetCtxs: Mock
+    close: Mock
   }
 
   let mockContext: {
-    getPublicClient: ReturnType<typeof vi.fn>
-    getServerClient: ReturnType<typeof vi.fn>
-    getWalletAddress: ReturnType<typeof vi.fn>
+    getPublicClient: Mock
+    getServerClient: Mock
+    getWalletAddress: Mock
   }
 
   beforeEach(() => {
@@ -64,7 +63,7 @@ describe("info commands", () => {
       getWalletAddress: vi.fn(() => "0x1234567890abcdef1234567890abcdef12345678"),
     }
 
-    vi.mocked(getContext).mockReturnValue(mockContext as any)
+    vi.mocked(getContext).mockReturnValue(mockContext as unknown as ReturnType<typeof getContext>)
   })
 
   describe("prices command logic", () => {

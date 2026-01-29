@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from "vitest"
+import { describe, it, expect, vi, beforeEach, type Mock } from "vitest"
 
 // Mock context and output modules
 vi.mock("../cli/program.js", () => ({
@@ -22,19 +22,19 @@ import {
 
 describe("trade commands", () => {
   let mockExchangeClient: {
-    order: ReturnType<typeof vi.fn>
-    cancel: ReturnType<typeof vi.fn>
-    updateLeverage: ReturnType<typeof vi.fn>
+    order: Mock
+    cancel: Mock
+    updateLeverage: Mock
   }
 
   let mockInfoClient: {
-    meta: ReturnType<typeof vi.fn>
-    allMids: ReturnType<typeof vi.fn>
+    meta: Mock
+    allMids: Mock
   }
 
   let mockContext: {
-    getWalletClient: ReturnType<typeof vi.fn>
-    getPublicClient: ReturnType<typeof vi.fn>
+    getWalletClient: Mock
+    getPublicClient: Mock
   }
 
   const mockMeta = {
@@ -64,7 +64,7 @@ describe("trade commands", () => {
       getPublicClient: vi.fn(() => mockInfoClient),
     }
 
-    vi.mocked(getContext).mockReturnValue(mockContext as any)
+    vi.mocked(getContext).mockReturnValue(mockContext as unknown as ReturnType<typeof getContext>)
   })
 
   describe("order command - limit orders", () => {

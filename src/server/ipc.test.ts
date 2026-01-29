@@ -1,6 +1,23 @@
 import { describe, it, expect, beforeEach, vi, afterEach } from "vitest"
 import { ServerCache } from "./cache.js"
 
+// Type for status result
+interface StatusResult {
+  running: boolean
+  testnet: boolean
+  connected: boolean
+  startedAt: number
+  uptime: number
+  cache: {
+    hasMids: boolean
+    hasAssetCtxs: boolean
+    hasPerpMetas: boolean
+    midsAge?: number
+    assetCtxsAge?: number
+    perpMetasAge?: number
+  }
+}
+
 // We need to test the handleRequest logic. Since IPCServer is a class with private methods,
 // we'll test it by creating a minimal test harness that exposes the request handling.
 
@@ -170,7 +187,7 @@ describe("IPC Request Handler", () => {
           ],
         ],
       }
-      cache.setAllDexsAssetCtxs(mockData as any)
+      cache.setAllDexsAssetCtxs(mockData as Parameters<typeof cache.setAllDexsAssetCtxs>[0])
 
       const response = handleRequest({ id: "1", method: "getAssetCtxs" })
       expect(response.error).toBeUndefined()
@@ -208,7 +225,7 @@ describe("IPC Request Handler", () => {
       const response = handleRequest({ id: "1", method: "getStatus" })
       expect(response.error).toBeUndefined()
 
-      const result = response.result as any
+      const result = response.result as StatusResult
       expect(result.running).toBe(true)
       expect(result.testnet).toBe(false)
       expect(result.connected).toBe(true)
@@ -222,7 +239,7 @@ describe("IPC Request Handler", () => {
       const testnetHandler = createRequestHandler(cache, true, startedAt, () => true)
       const response = testnetHandler({ id: "1", method: "getStatus" })
 
-      const result = response.result as any
+      const result = response.result as StatusResult
       expect(result.testnet).toBe(true)
     })
 
@@ -230,7 +247,7 @@ describe("IPC Request Handler", () => {
       const disconnectedHandler = createRequestHandler(cache, false, startedAt, () => false)
       const response = disconnectedHandler({ id: "1", method: "getStatus" })
 
-      const result = response.result as any
+      const result = response.result as StatusResult
       expect(result.connected).toBe(false)
     })
   })
