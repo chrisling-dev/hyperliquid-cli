@@ -14,6 +14,8 @@ export interface CLIContext {
   getWalletClient(): ExchangeClient;
   getWalletAddress(): Address;
   getServerClient(): Promise<ServerClient | null>;
+  hasAccount(): boolean;
+  requiresAccountSetup(): boolean;
 }
 
 export function createContext(config: Config): CLIContext {
@@ -38,8 +40,14 @@ export function createContext(config: Config): CLIContext {
     getWalletClient(): ExchangeClient {
       if (!walletClient) {
         if (!config.privateKey) {
+          if (config.account?.type === "readonly") {
+            throw new Error(
+              `Account "${config.account.alias}" is read-only and cannot perform trading operations.\n` +
+              "Run 'hl account add' to set up an API wallet for trading."
+            );
+          }
           throw new Error(
-            "HYPERLIQUID_PRIVATE_KEY environment variable is required for this command"
+            "No account configured. Run 'hl account add' to set up your account."
           );
         }
         const account = privateKeyToAccount(config.privateKey as Hex);
@@ -57,7 +65,7 @@ export function createContext(config: Config): CLIContext {
         return account.address;
       }
       throw new Error(
-        "HYPERLIQUID_PRIVATE_KEY or HYPERLIQUID_WALLET_ADDRESS environment variable is required"
+        "No account configured. Run 'hl account add' to set up your account."
       );
     },
 
@@ -69,6 +77,14 @@ export function createContext(config: Config): CLIContext {
       // Try to connect to server
       serverClient = await tryConnectToServer();
       return serverClient;
+    },
+
+    hasAccount(): boolean {
+      return !!(config.walletAddress || config.privateKey);
+    },
+
+    requiresAccountSetup(): boolean {
+      return !config.walletAddress && !config.privateKey;
     },
   };
 }
