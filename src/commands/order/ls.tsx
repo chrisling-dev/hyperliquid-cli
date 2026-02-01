@@ -117,10 +117,10 @@ function WatchOrders({ user, isTestnet, isJson }: WatchOrdersProps): React.React
   return <OrdersDisplay orders={orders} isWatch={true} lastUpdated={lastUpdated} />
 }
 
-export function registerOrdersCommand(account: Command): void {
-  account
-    .command("orders")
-    .description("Get open orders")
+export function registerLsCommand(order: Command): void {
+  order
+    .command("ls")
+    .description("List open orders")
     .option("--user <address>", "User address (defaults to configured wallet)")
     .option("-w, --watch", "Watch mode - stream real-time updates")
     .action(async function (this: Command, options: { user?: string; watch?: boolean }) {

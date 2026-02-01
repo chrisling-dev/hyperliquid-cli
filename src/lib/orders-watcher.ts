@@ -1,4 +1,9 @@
-import { WebSocketTransport, SubscriptionClient, HttpTransport, InfoClient } from "@nktkas/hyperliquid"
+import {
+  WebSocketTransport,
+  SubscriptionClient,
+  HttpTransport,
+  InfoClient,
+} from "@nktkas/hyperliquid"
 import WebSocket from "ws"
 import type { Address } from "viem"
 
@@ -39,7 +44,7 @@ export function createOrdersWatcher(config: OrdersWatcherConfig): OrdersWatcher 
 
   const fetchOrders = async (): Promise<OrderData[]> => {
     if (!httpClient) return []
-    const orders = await httpClient.openOrders({ user: config.user })
+    const orders = await httpClient.openOrders({ user: config.user, dex: "ALL_DEXS" })
     return orders.map((o: OrderData) => ({
       oid: o.oid,
       coin: o.coin,
@@ -69,18 +74,15 @@ export function createOrdersWatcher(config: OrdersWatcherConfig): OrdersWatcher 
       await wsTransport.ready()
 
       // Subscribe to order updates
-      subscription = await subscriptionClient.orderUpdates(
-        { user: config.user },
-        async () => {
-          // Re-fetch orders on any update
-          try {
-            const orders = await fetchOrders()
-            config.onUpdate(orders)
-          } catch (err) {
-            config.onError(err instanceof Error ? err : new Error(String(err)))
-          }
+      subscription = await subscriptionClient.orderUpdates({ user: config.user }, async () => {
+        // Re-fetch orders on any update
+        try {
+          const orders = await fetchOrders()
+          config.onUpdate(orders)
+        } catch (err) {
+          config.onError(err instanceof Error ? err : new Error(String(err)))
         }
-      )
+      })
     },
 
     async stop(): Promise<void> {

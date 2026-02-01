@@ -112,11 +112,11 @@ export class IPCServer {
         }
         const coin = params?.coin as string | undefined
         if (coin) {
-          const price = entry.data[coin.toUpperCase()]
+          const price = entry.data[coin]
           if (price === undefined) {
             return { id, error: `Coin not found: ${coin}` }
           }
-          return { id, result: { [coin.toUpperCase()]: price }, cached_at: entry.updatedAt }
+          return { id, result: { [coin]: price }, cached_at: entry.updatedAt }
         }
         return { id, result: entry.data, cached_at: entry.updatedAt }
       }
