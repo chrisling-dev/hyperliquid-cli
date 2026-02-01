@@ -9,9 +9,7 @@ import { SERVER_PID_PATH, SERVER_LOG_PATH } from "../lib/paths.js"
 import { ServerClient, isServerRunning } from "../client/index.js"
 
 export function registerServerCommands(program: Command): void {
-  const server = program
-    .command("server")
-    .description("Manage the background WebSocket server")
+  const server = program.command("server").description("Manage the background WebSocket server")
 
   server
     .command("start")
@@ -163,13 +161,13 @@ export function registerServerCommands(program: Command): void {
           console.log(``)
           console.log(`Cache:`)
           console.log(
-            `  Prices:      ${status.cache.hasMids ? `cached (${formatAge(status.cache.midsAge)} ago)` : "not loaded"}`,
-          )
-          console.log(
-            `  Asset Ctxs:  ${status.cache.hasAssetCtxs ? `cached (${formatAge(status.cache.assetCtxsAge)} ago)` : "not loaded"}`,
+            `  Mid Prices:      ${status.cache.hasMids ? `cached (${formatAge(status.cache.midsAge)} ago)` : "not loaded"}`,
           )
           console.log(
             `  Perp Meta:   ${status.cache.hasPerpMetas ? `cached (${formatAge(status.cache.perpMetasAge)} ago)` : "not loaded"}`,
+          )
+          console.log(
+            `  Perp Asset Ctxs:  ${status.cache.hasAssetCtxs ? `cached (${formatAge(status.cache.assetCtxsAge)} ago)` : "not loaded"}`,
           )
           console.log(
             `  Spot Meta:   ${status.cache.hasSpotMeta ? `cached (${formatAge(status.cache.spotMetaAge)} ago)` : "not loaded"}`,
