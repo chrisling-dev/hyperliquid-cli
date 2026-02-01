@@ -1,6 +1,7 @@
 import type { Command } from "commander"
 import { registerLsCommand } from "./ls.js"
 import { registerCancelCommand } from "./cancel.js"
+import { registerCancelAllCommand } from "./cancel-all.js"
 import { registerMarketCommand } from "./market.js"
 import { registerLimitCommand } from "./limit.js"
 import { registerSetLeverageCommand } from "./set-leverage.js"
@@ -13,6 +14,7 @@ export function registerOrderCommands(program: Command): void {
 
   registerLsCommand(order)
   registerCancelCommand(order)
+  registerCancelAllCommand(order)
   registerMarketCommand(order)
   registerLimitCommand(order)
   registerSetLeverageCommand(order)
