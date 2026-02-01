@@ -3,7 +3,6 @@ import { registerAccountCommands } from "./account/index.js"
 import { registerMarketsCommands } from "./markets/index.js"
 import { registerAssetCommands } from "./asset/index.js"
 import { registerTradeCommands } from "./trade.js"
-import { registerReferralCommands } from "./referral/index.js"
 import { registerServerCommands } from "./server.js"
 
 export function registerCommands(program: Command): void {
@@ -11,6 +10,5 @@ export function registerCommands(program: Command): void {
   registerMarketsCommands(program)
   registerAssetCommands(program)
   registerTradeCommands(program)
-  registerReferralCommands(program)
   registerServerCommands(program)
 }

@@ -240,7 +240,7 @@ function WatchMarkets({
       try {
         const serverClient = await ctx.getServerClient()
         if (!serverClient) {
-          setError("Server not running. Start with: hl start")
+          setError("Server not running. Start with: hl server start")
         } else {
           const data = await fetchMarketData(serverClient, isSpotOnly, isPerpOnly)
           // Don't close - the client is cached and reused across polls
@@ -361,7 +361,7 @@ export function registerLsCommand(markets: Command): void {
             unmount()
           }
         } else {
-          outputError("Server not running. Start with: hl start")
+          outputError("Server not running. Start with: hl server start")
           process.exit(1)
         }
       } catch (err) {

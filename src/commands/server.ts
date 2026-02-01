@@ -9,7 +9,11 @@ import { SERVER_PID_PATH, SERVER_LOG_PATH } from "../lib/paths.js"
 import { ServerClient, isServerRunning } from "../client/index.js"
 
 export function registerServerCommands(program: Command): void {
-  program
+  const server = program
+    .command("server")
+    .description("Manage the background WebSocket server")
+
+  server
     .command("start")
     .description("Start the background WebSocket server")
     .action(async function (this: Command) {
@@ -80,12 +84,12 @@ export function registerServerCommands(program: Command): void {
       process.exit(1)
     })
 
-  program
+  server
     .command("stop")
     .description("Stop the background WebSocket server")
     .action(async function (this: Command) {
       if (!isServerRunning()) {
-        outputError("Server is not running, run 'hl start' to start it")
+        outputError("Server is not running, run 'hl server start' to start it")
         process.exit(1)
       }
 
@@ -128,7 +132,7 @@ export function registerServerCommands(program: Command): void {
       }
     })
 
-  program
+  server
     .command("status")
     .description("Show background server status")
     .action(async function (this: Command) {
@@ -138,7 +142,7 @@ export function registerServerCommands(program: Command): void {
         if (outputOpts.json) {
           output({ running: false }, outputOpts)
         } else {
-          console.log(`Server is not running, run 'hl start' to start it`)
+          console.log(`Server is not running, run 'hl server start' to start it`)
         }
         return
       }
@@ -180,7 +184,7 @@ export function registerServerCommands(program: Command): void {
           output({ running: true, error: String(err) }, outputOpts)
         } else {
           console.log(`Server appears running but not responding`)
-          console.log(`Try: hl stop && hl start`)
+          console.log(`Try: hl server stop && hl server start`)
         }
       }
     })
