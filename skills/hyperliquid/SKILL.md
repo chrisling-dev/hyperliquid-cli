@@ -197,6 +197,8 @@ hl asset price BTC       # Get price
 hl asset price BTC -w    # Watch price
 hl asset book ETH        # Order book
 hl asset book ETH -w     # Watch order book
+hl asset leverage BTC    # Get leverage and margin info
+hl asset leverage BTC -w # Watch leverage and margin
 ```
 
 ### Server Management

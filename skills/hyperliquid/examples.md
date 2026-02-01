@@ -109,6 +109,33 @@ hl order limit sell 0.1 @107 30.00 --tif Gtc
 
 ---
 
+## Check Leverage Before Trading
+
+**IMPORTANT:** Before placing any order, always check your leverage settings and available margin to ensure you have sufficient funds:
+
+```bash
+# Check leverage and margin for BTC
+hl asset leverage BTC --json
+
+# Output shows:
+# - Current leverage (value and type)
+# - Max leverage for this asset
+# - Current position (if any)
+# - Account value, margin used, and available margin
+
+# Example workflow before placing a trade:
+# 1. Check leverage and available margin
+hl asset leverage BTC --json
+
+# 2. If needed, adjust leverage
+hl order set-leverage BTC 10
+
+# 3. Place your order
+hl order limit long 0.01 BTC 50000
+```
+
+---
+
 ## Trading Crypto Perpetuals
 
 Perps use `long` and `short` directions. Crypto perp coins are typically uppercase symbols like `BTC`, `ETH`, `SOL`.
@@ -121,6 +148,9 @@ hl markets ls
 
 # Check current BTC price (BTC is the coin value from markets ls)
 hl asset price BTC
+
+# Check leverage and available margin
+hl asset leverage BTC --json
 
 # Set leverage
 hl order set-leverage BTC 10
