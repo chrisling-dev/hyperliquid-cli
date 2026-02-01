@@ -166,6 +166,39 @@ hl asset price BTC -w
 {"coin": "BTC", "price": "89500.0"}
 ```
 
+#### `hl asset leverage <coin>`
+
+Get leverage and margin info for a specific asset.
+
+```bash
+# One-time fetch
+hl asset leverage BTC --json
+
+# Watch mode - real-time updates
+hl asset leverage BTC -w
+
+# Specific address
+hl asset leverage BTC --user 0x... --json
+```
+
+**Output (JSON):**
+```json
+{
+  "coin": "BTC",
+  "leverage": { "value": 10, "type": "cross" },
+  "maxLeverage": 50,
+  "markPx": "85000.0",
+  "maxTradeSzs": ["0", "1.5"],
+  "availableToTrade": ["0", "1.2"],
+  "position": { "size": "0.01", "value": "850.00" },
+  "margin": {
+    "accountValue": "10000.00",
+    "totalMarginUsed": "850.00",
+    "availableMargin": "9150.00"
+  }
+}
+```
+
 #### `hl asset book <coin>`
 
 Get order book for a specific asset with depth visualization.
@@ -382,6 +415,10 @@ Common errors:
 6. **For testnet testing**, always add `--testnet` flag
 7. **Handle errors gracefully** - check exit codes and stderr
 8. **Market orders use IOC** with slippage - may partially fill or fail in low liquidity
+9. **Before placing orders**, always check leverage and available margin:
+   ```bash
+   hl asset leverage <coin> --json
+   ```
 
 ## Asset Symbol Reference
 

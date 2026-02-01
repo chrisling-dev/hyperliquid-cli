@@ -6,12 +6,12 @@ Complete command reference for the Hyperliquid CLI.
 
 These options can be used with any command:
 
-| Option | Description |
-|--------|-------------|
-| `--json` | Output in JSON format for scripting |
-| `--testnet` | Use testnet instead of mainnet |
-| `-V, --version` | Show version number |
-| `-h, --help` | Show help |
+| Option          | Description                         |
+| --------------- | ----------------------------------- |
+| `--json`        | Output in JSON format for scripting |
+| `--testnet`     | Use testnet instead of mainnet      |
+| `-V, --version` | Show version number                 |
+| `-h, --help`    | Show help                           |
 
 ---
 
@@ -24,12 +24,14 @@ Commands for managing trading accounts stored locally in `~/.hyperliquid/account
 Interactive wizard to add a new account.
 
 **Process:**
+
 1. Choose account type (API wallet for trading, read-only for monitoring)
 2. Enter private key (for API wallet) or address (for read-only)
 3. Set an alias for easy identification
 4. Optionally set as default account
 
 **Example:**
+
 ```bash
 hl account add
 # Follow interactive prompts
@@ -40,17 +42,20 @@ hl account add
 List all configured accounts.
 
 **Output columns:**
+
 - Alias
 - Address (truncated)
 - Type (api-wallet or read-only)
 - Default status
 
 **Example:**
+
 ```bash
 hl account ls
 ```
 
 **JSON output:**
+
 ```json
 [
   {
@@ -93,6 +98,7 @@ View perpetual positions.
 | `--user <address>` | View positions for specific address |
 
 **Output columns:**
+
 - Coin
 - Size (positive = long, negative = short)
 - Entry Price
@@ -102,6 +108,7 @@ View perpetual positions.
 - Liquidation Price
 
 **Examples:**
+
 ```bash
 hl account positions
 hl account positions -w
@@ -110,6 +117,7 @@ hl account positions --json
 ```
 
 **JSON output:**
+
 ```json
 {
   "positions": [
@@ -143,6 +151,7 @@ View open orders.
 **Alias:** `hl order ls`
 
 **Examples:**
+
 ```bash
 hl account orders
 hl account orders -w
@@ -150,6 +159,7 @@ hl account orders --json
 ```
 
 **JSON output:**
+
 ```json
 [
   {
@@ -183,6 +193,7 @@ Place a limit order.
 | `--reduce-only` | Reduce-only order |
 
 **Examples:**
+
 ```bash
 # Buy 0.001 BTC at $50,000
 hl order limit buy 0.001 BTC 50000
@@ -199,13 +210,12 @@ hl order limit buy 1 GOLD 2500
 ```
 
 **JSON output:**
+
 ```json
 {
   "response": {
     "data": {
-      "statuses": [
-        { "resting": { "oid": 12345 } }
-      ]
+      "statuses": [{ "resting": { "oid": 12345 } }]
     }
   }
 }
@@ -229,6 +239,7 @@ Place a market order.
 | `--reduce-only` | Reduce-only order |
 
 **Examples:**
+
 ```bash
 hl order market buy 0.001 BTC
 hl order market sell 0.1 ETH --slippage 0.5
@@ -245,6 +256,7 @@ Configure order defaults.
 | `--slippage <pct>` | Set default slippage for market orders |
 
 **Examples:**
+
 ```bash
 # View current configuration
 hl order configure
@@ -263,6 +275,7 @@ Cancel an order.
 | `oid` | Order ID (optional - interactive if omitted) |
 
 **Examples:**
+
 ```bash
 # Interactive selection from open orders
 hl order cancel
@@ -282,6 +295,7 @@ Cancel all open orders.
 | `-y, --yes` | Skip confirmation prompt |
 
 **Examples:**
+
 ```bash
 # Cancel all orders (with confirmation)
 hl order cancel-all
@@ -310,6 +324,7 @@ Set leverage for a coin.
 | `--cross` | Use cross margin (default) |
 
 **Examples:**
+
 ```bash
 # Set 10x cross margin leverage for BTC
 hl order set-leverage BTC 10
@@ -333,6 +348,7 @@ View account balances (spot + perpetuals).
 | `--user <address>` | View balances for specific address |
 
 **Examples:**
+
 ```bash
 hl account balances
 hl account balances -w
@@ -340,11 +356,10 @@ hl account balances --json
 ```
 
 **JSON output:**
+
 ```json
 {
-  "spot": [
-    { "token": "USDC", "total": "10000.0", "hold": "500.0", "available": "9500.0" }
-  ],
+  "spot": [{ "token": "USDC", "total": "10000.0", "hold": "500.0", "available": "9500.0" }],
   "perp": {
     "accountValue": "10000.0",
     "marginUsed": "2000.0",
@@ -364,6 +379,7 @@ Combined view of positions and balances.
 | `--user <address>` | View portfolio for specific address |
 
 **Examples:**
+
 ```bash
 hl account portfolio
 hl account portfolio -w
@@ -378,12 +394,14 @@ hl account portfolio -w
 List all available markets (perpetual and spot).
 
 **Examples:**
+
 ```bash
 hl markets ls
 hl markets ls --json
 ```
 
 **Output includes:**
+
 - Market name
 - Type (perp/spot)
 - Max leverage
@@ -404,6 +422,7 @@ Get current price for an asset.
 | `-w, --watch` | Real-time price updates |
 
 **Examples:**
+
 ```bash
 hl asset price BTC
 hl asset price ETH -w
@@ -415,6 +434,7 @@ hl asset price GOLD
 ```
 
 **JSON output:**
+
 ```json
 {
   "coin": "BTC",
@@ -432,6 +452,7 @@ View order book for an asset.
 | `-w, --watch` | Real-time order book updates |
 
 **Examples:**
+
 ```bash
 hl asset book BTC
 hl asset book ETH -w
@@ -439,9 +460,62 @@ hl asset book AAPL --json
 ```
 
 **Output includes:**
+
 - Top bid/ask levels
 - Cumulative depth visualization
 - Spread calculation
+
+### `hl asset leverage <coin>`
+
+Get leverage and margin info for a specific asset.
+
+**Arguments:**
+| Argument | Description |
+|----------|-------------|
+| `coin` | Coin symbol (e.g., BTC, ETH, xyz:AAPL) |
+
+**Options:**
+| Option | Description |
+|--------|-------------|
+| `-w, --watch` | Real-time updates via WebSocket |
+| `--user <address>` | View leverage info for specific address |
+
+**Examples:**
+
+```bash
+hl asset leverage BTC
+hl asset leverage ETH -w
+hl asset leverage BTC --user 0x1234...
+hl asset leverage BTC --json
+```
+
+**Output includes:**
+
+- Current leverage value and type (cross/isolated)
+- Maximum leverage for the asset
+- Mark price
+- Max trade sizes and available to trade (short/long capacity)
+- Current position size and value (if any)
+- Account value, margin used, and available margin
+
+**JSON output:**
+
+```json
+{
+  "coin": "BTC",
+  "leverage": { "value": 10, "type": "cross" },
+  "maxLeverage": 50,
+  "markPx": "85000.0",
+  "maxTradeSzs": ["0", "1.5"],
+  "availableToTrade": ["0", "1.2"],
+  "position": { "size": "0.01", "value": "850.00" },
+  "margin": {
+    "accountValue": "10000.00",
+    "totalMarginUsed": "850.00",
+    "availableMargin": "9150.00"
+  }
+}
+```
 
 ---
 
@@ -452,12 +526,14 @@ hl asset book AAPL --json
 Start the background caching server.
 
 **Benefits:**
+
 - Persistent WebSocket connections
 - In-memory market data cache
 - ~20-50x faster queries
 - Sub-5ms latency
 
 **Example:**
+
 ```bash
 hl server start
 ```
@@ -467,6 +543,7 @@ hl server start
 Stop the background server.
 
 **Example:**
+
 ```bash
 hl server stop
 ```
@@ -476,12 +553,14 @@ hl server stop
 Check server status.
 
 **Output includes:**
+
 - Running state
 - WebSocket connection status
 - Uptime
 - Cache statistics
 
 **Example:**
+
 ```bash
 hl server status
 ```
@@ -492,38 +571,38 @@ hl server status
 
 Common errors and their meanings:
 
-| Error | Cause | Solution |
-|-------|-------|----------|
-| `No default account` | No account configured | Run `hl account add` |
-| `Invalid private key` | Malformed private key | Ensure key starts with `0x` |
-| `Insufficient margin` | Not enough balance | Reduce position size or add funds |
-| `Invalid asset` | Unknown coin symbol | Check `hl markets ls` for valid symbols |
-| `Rate limited` | Too many requests | Start server with `hl server start` |
+| Error                 | Cause                 | Solution                                |
+| --------------------- | --------------------- | --------------------------------------- |
+| `No default account`  | No account configured | Run `hl account add`                    |
+| `Invalid private key` | Malformed private key | Ensure key starts with `0x`             |
+| `Insufficient margin` | Not enough balance    | Reduce position size or add funds       |
+| `Invalid asset`       | Unknown coin symbol   | Check `hl markets ls` for valid symbols |
+| `Rate limited`        | Too many requests     | Start server with `hl server start`     |
 
 ---
 
 ## Exit Codes
 
-| Code | Meaning |
-|------|---------|
-| 0 | Success |
-| 1 | General error |
+| Code | Meaning       |
+| ---- | ------------- |
+| 0    | Success       |
+| 1    | General error |
 
 ---
 
 ## Environment Variables
 
-| Variable | Description |
-|----------|-------------|
-| `HYPERLIQUID_PRIVATE_KEY` | Private key for trading (required if not using account management) |
-| `HYPERLIQUID_WALLET_ADDRESS` | Explicit wallet address (optional, derived from key) |
+| Variable                     | Description                                                        |
+| ---------------------------- | ------------------------------------------------------------------ |
+| `HYPERLIQUID_PRIVATE_KEY`    | Private key for trading (required if not using account management) |
+| `HYPERLIQUID_WALLET_ADDRESS` | Explicit wallet address (optional, derived from key)               |
 
 ---
 
 ## Local Storage
 
-| Path | Description |
-|------|-------------|
-| `~/.hyperliquid/accounts.db` | SQLite database for account management |
+| Path                               | Description                                  |
+| ---------------------------------- | -------------------------------------------- |
+| `~/.hyperliquid/accounts.db`       | SQLite database for account management       |
 | `~/.hyperliquid/order-config.json` | Order configuration (default slippage, etc.) |
-| `~/.hyperliquid/server.pid` | Background server PID file |
+| `~/.hyperliquid/server.pid`        | Background server PID file                   |
