@@ -1,6 +1,8 @@
 import { connect, type Socket } from "node:net"
 import { existsSync } from "node:fs"
 import { SERVER_SOCKET_PATH } from "../lib/paths.js"
+import { AllPerpMetasResponse, SpotMetaResponse } from "@nktkas/hyperliquid"
+import { AllDexsAssetCtxsEvent, SpotAssetCtxsEvent } from "@nktkas/hyperliquid/api/subscription"
 
 interface RPCResponse {
   id: string
@@ -19,16 +21,23 @@ export interface ServerStatus {
     hasMids: boolean
     hasAssetCtxs: boolean
     hasPerpMetas: boolean
+    hasSpotMeta: boolean
+    hasSpotAssetCtxs: boolean
     midsAge?: number
     assetCtxsAge?: number
     perpMetasAge?: number
+    spotMetaAge?: number
+    spotAssetCtxsAge?: number
   }
 }
 
 export class ServerClient {
   private socket: Socket | null = null
   private requestId = 0
-  private pending = new Map<string, { resolve: (value: RPCResponse) => void; reject: (err: Error) => void }>()
+  private pending = new Map<
+    string,
+    { resolve: (value: RPCResponse) => void; reject: (err: Error) => void }
+  >()
   private buffer = ""
 
   async connect(): Promise<void> {
@@ -123,20 +132,36 @@ export class ServerClient {
     return { data: response.result as Record<string, string>, cached_at: response.cached_at! }
   }
 
-  async getAssetCtxs(): Promise<{ data: unknown; cached_at: number }> {
+  async getAssetCtxs(): Promise<{ data: AllDexsAssetCtxsEvent; cached_at: number }> {
     const response = await this.request("getAssetCtxs")
     if (response.error) {
       throw new Error(response.error)
     }
-    return { data: response.result, cached_at: response.cached_at! }
+    return { data: response.result as AllDexsAssetCtxsEvent, cached_at: response.cached_at! }
   }
 
-  async getPerpMeta(): Promise<{ data: unknown; cached_at: number }> {
+  async getPerpMeta(): Promise<{ data: AllPerpMetasResponse; cached_at: number }> {
     const response = await this.request("getPerpMeta")
     if (response.error) {
       throw new Error(response.error)
     }
-    return { data: response.result, cached_at: response.cached_at! }
+    return { data: response.result as AllPerpMetasResponse, cached_at: response.cached_at! }
+  }
+
+  async getSpotMeta(): Promise<{ data: SpotMetaResponse; cached_at: number }> {
+    const response = await this.request("getSpotMeta")
+    if (response.error) {
+      throw new Error(response.error)
+    }
+    return { data: response.result as SpotMetaResponse, cached_at: response.cached_at! }
+  }
+
+  async getSpotAssetCtxs(): Promise<{ data: SpotAssetCtxsEvent; cached_at: number }> {
+    const response = await this.request("getSpotAssetCtxs")
+    if (response.error) {
+      throw new Error(response.error)
+    }
+    return { data: response.result as SpotAssetCtxsEvent, cached_at: response.cached_at! }
   }
 
   async getStatus(): Promise<ServerStatus> {

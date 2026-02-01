@@ -137,6 +137,22 @@ export class IPCServer {
         return { id, result: entry.data, cached_at: entry.updatedAt }
       }
 
+      case "getSpotMeta": {
+        const entry = this.cache.getSpotMeta()
+        if (!entry) {
+          return { id, error: "No data available" }
+        }
+        return { id, result: entry.data, cached_at: entry.updatedAt }
+      }
+
+      case "getSpotAssetCtxs": {
+        const entry = this.cache.getSpotAssetCtxs()
+        if (!entry) {
+          return { id, error: "No data available" }
+        }
+        return { id, result: entry.data, cached_at: entry.updatedAt }
+      }
+
       case "getStatus": {
         const cacheStatus = this.cache.getStatus()
         return {

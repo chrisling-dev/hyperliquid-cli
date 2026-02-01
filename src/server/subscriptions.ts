@@ -5,7 +5,7 @@ import {
   HttpTransport,
 } from "@nktkas/hyperliquid"
 import WebSocket from "ws"
-import type { ServerCache, AllMidsData, AllDexsAssetCtxsData, AllPerpMetasData } from "./cache.js"
+import type { ServerCache, AllMidsData } from "./cache.js"
 
 // Interface for subscription handle returned by SDK
 interface Subscription {
@@ -15,10 +15,11 @@ interface Subscription {
 export class SubscriptionManager {
   private wsTransport: WebSocketTransport
   private subscriptionClient: SubscriptionClient
-  private httpClient: InfoClient
+  private infoClient: InfoClient
   private cache: ServerCache
   private subscriptions: Subscription[] = []
   private perpMetaInterval: ReturnType<typeof setInterval> | null = null
+  private spotMetaInterval: ReturnType<typeof setInterval> | null = null
   private isTestnet: boolean
   private log: (msg: string) => void
 
@@ -37,7 +38,7 @@ export class SubscriptionManager {
 
     // Create HTTP transport for polling perpMeta
     const httpTransport = new HttpTransport({ isTestnet })
-    this.httpClient = new InfoClient({ transport: httpTransport })
+    this.infoClient = new InfoClient({ transport: httpTransport })
   }
 
   async start(): Promise<void> {
@@ -56,10 +57,18 @@ export class SubscriptionManager {
     // Subscribe to allDexsAssetCtxs
     this.log("Subscribing to allDexsAssetCtxs...")
     const ctxsSub = await this.subscriptionClient.allDexsAssetCtxs((event) => {
-      this.cache.setAllDexsAssetCtxs(event as unknown as AllDexsAssetCtxsData)
+      this.cache.setAllDexsAssetCtxs(event)
     })
     this.subscriptions.push(ctxsSub)
     this.log("Subscribed to allDexsAssetCtxs")
+
+    // Subscribe to spotAssetCtxs
+    this.log("Subscribing to spotAssetCtxs...")
+    const spotCtxsSub = await this.subscriptionClient.spotAssetCtxs((event) => {
+      this.cache.setSpotAssetCtxs(event)
+    })
+    this.subscriptions.push(spotCtxsSub)
+    this.log("Subscribed to spotAssetCtxs")
 
     // Poll allPerpMetas every 60 seconds (it doesn't change often)
     await this.fetchPerpMetas()
@@ -69,12 +78,27 @@ export class SubscriptionManager {
       })
     }, 60_000)
     this.log("Started perpMetas polling (60s interval)")
+
+    // Poll spotMeta every 60 seconds (it doesn't change often)
+    await this.fetchSpotMeta()
+    this.spotMetaInterval = setInterval(() => {
+      this.fetchSpotMeta().catch((err) => {
+        this.log(`Error fetching spotMeta: ${err}`)
+      })
+    }, 60_000)
+    this.log("Started spotMeta polling (60s interval)")
   }
 
   private async fetchPerpMetas(): Promise<void> {
-    const meta = await this.httpClient.meta()
-    this.cache.setAllPerpMetas(meta as AllPerpMetasData)
+    const meta = await this.infoClient.allPerpMetas()
+    this.cache.setAllPerpMetas(meta)
     this.log("Updated perpMetas cache")
+  }
+
+  private async fetchSpotMeta(): Promise<void> {
+    const meta = await this.infoClient.spotMeta()
+    this.cache.setSpotMeta(meta)
+    this.log("Updated spotMeta cache")
   }
 
   async stop(): Promise<void> {
@@ -82,6 +106,12 @@ export class SubscriptionManager {
     if (this.perpMetaInterval) {
       clearInterval(this.perpMetaInterval)
       this.perpMetaInterval = null
+    }
+
+    // Stop spotMeta polling
+    if (this.spotMetaInterval) {
+      clearInterval(this.spotMetaInterval)
+      this.spotMetaInterval = null
     }
 
     // Unsubscribe from all WebSocket subscriptions

@@ -1,10 +1,7 @@
 import { describe, it, expect, beforeEach, vi, afterEach } from "vitest"
-import {
-  ServerCache,
-  type AllMidsData,
-  type AllDexsAssetCtxsData,
-  type AllPerpMetasData,
-} from "./cache.js"
+import { ServerCache, type AllMidsData } from "./cache.js"
+import { AllPerpMetasResponse } from "@nktkas/hyperliquid"
+import { AllDexsAssetCtxsEvent } from "@nktkas/hyperliquid/api/subscription"
 
 describe("ServerCache", () => {
   let cache: ServerCache
@@ -59,7 +56,7 @@ describe("ServerCache", () => {
     })
 
     it("should store and retrieve asset contexts", () => {
-      const data: AllDexsAssetCtxsData = {
+      const data: AllDexsAssetCtxsEvent = {
         ctxs: [
           [
             "",
@@ -97,12 +94,16 @@ describe("ServerCache", () => {
     })
 
     it("should store and retrieve perp metadata", () => {
-      const data: AllPerpMetasData = {
-        universe: [
-          { name: "BTC", szDecimals: 4, maxLeverage: 50 },
-          { name: "ETH", szDecimals: 3, maxLeverage: 50 },
-        ],
-      }
+      const data: AllPerpMetasResponse = [
+        {
+          universe: [
+            { name: "BTC", szDecimals: 4, maxLeverage: 50, marginTableId: 0 },
+            { name: "ETH", szDecimals: 3, maxLeverage: 50, marginTableId: 0 },
+          ],
+          marginTables: [],
+          collateralToken: 0,
+        },
+      ]
 
       vi.setSystemTime(new Date("2024-01-01T06:00:00Z"))
       cache.setAllPerpMetas(data)
@@ -114,13 +115,19 @@ describe("ServerCache", () => {
     })
 
     it("should handle onlyIsolated flag", () => {
-      const data: AllPerpMetasData = {
-        universe: [{ name: "MEME", szDecimals: 0, maxLeverage: 10, onlyIsolated: true }],
-      }
+      const data: AllPerpMetasResponse = [
+        {
+          universe: [
+            { name: "MEME", szDecimals: 0, maxLeverage: 10, onlyIsolated: true, marginTableId: 0 },
+          ],
+          marginTables: [],
+          collateralToken: 0,
+        },
+      ]
 
       cache.setAllPerpMetas(data)
       const result = cache.getAllPerpMetas()
-      expect(result!.data.universe[0].onlyIsolated).toBe(true)
+      expect(result!.data[0].universe[0].onlyIsolated).toBe(true)
     })
   })
 
@@ -138,7 +145,7 @@ describe("ServerCache", () => {
     it("should return true for populated caches", () => {
       cache.setAllMids({ BTC: "50000" })
       cache.setAllDexsAssetCtxs({ ctxs: [] })
-      cache.setAllPerpMetas({ universe: [] })
+      cache.setAllPerpMetas([{ universe: [], marginTables: [], collateralToken: 0 }])
 
       const status = cache.getStatus()
       expect(status.hasMids).toBe(true)
@@ -154,7 +161,7 @@ describe("ServerCache", () => {
       cache.setAllDexsAssetCtxs({ ctxs: [] })
 
       vi.advanceTimersByTime(2000)
-      cache.setAllPerpMetas({ universe: [] })
+      cache.setAllPerpMetas([{ universe: [], marginTables: [], collateralToken: 0 }])
 
       vi.advanceTimersByTime(500)
 

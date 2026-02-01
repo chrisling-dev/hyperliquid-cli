@@ -5,10 +5,7 @@ import { fileURLToPath } from "node:url"
 import { dirname, join } from "node:path"
 import { getOutputOptions } from "../cli/program.js"
 import { output, outputError, outputSuccess } from "../cli/output.js"
-import {
-  SERVER_PID_PATH,
-  SERVER_LOG_PATH,
-} from "../lib/paths.js"
+import { SERVER_PID_PATH, SERVER_LOG_PATH } from "../lib/paths.js"
 import { ServerClient, isServerRunning } from "../client/index.js"
 
 export function registerServerCommands(program: Command): void {
@@ -88,7 +85,7 @@ export function registerServerCommands(program: Command): void {
     .description("Stop the background WebSocket server")
     .action(async function (this: Command) {
       if (!isServerRunning()) {
-        outputError("Server is not running")
+        outputError("Server is not running, run 'hl start' to start it")
         process.exit(1)
       }
 
@@ -141,7 +138,7 @@ export function registerServerCommands(program: Command): void {
         if (outputOpts.json) {
           output({ running: false }, outputOpts)
         } else {
-          console.log("Server is not running")
+          console.log(`Server is not running, run 'hl start' to start it`)
         }
         return
       }
@@ -161,9 +158,21 @@ export function registerServerCommands(program: Command): void {
           console.log(`Uptime:     ${formatUptime(status.uptime)}`)
           console.log(``)
           console.log(`Cache:`)
-          console.log(`  Prices:      ${status.cache.hasMids ? `cached (${formatAge(status.cache.midsAge)} ago)` : "not loaded"}`)
-          console.log(`  Asset Ctxs:  ${status.cache.hasAssetCtxs ? `cached (${formatAge(status.cache.assetCtxsAge)} ago)` : "not loaded"}`)
-          console.log(`  Perp Meta:   ${status.cache.hasPerpMetas ? `cached (${formatAge(status.cache.perpMetasAge)} ago)` : "not loaded"}`)
+          console.log(
+            `  Prices:      ${status.cache.hasMids ? `cached (${formatAge(status.cache.midsAge)} ago)` : "not loaded"}`,
+          )
+          console.log(
+            `  Asset Ctxs:  ${status.cache.hasAssetCtxs ? `cached (${formatAge(status.cache.assetCtxsAge)} ago)` : "not loaded"}`,
+          )
+          console.log(
+            `  Perp Meta:   ${status.cache.hasPerpMetas ? `cached (${formatAge(status.cache.perpMetasAge)} ago)` : "not loaded"}`,
+          )
+          console.log(
+            `  Spot Meta:   ${status.cache.hasSpotMeta ? `cached (${formatAge(status.cache.spotMetaAge)} ago)` : "not loaded"}`,
+          )
+          console.log(
+            `  Spot Ctxs:   ${status.cache.hasSpotAssetCtxs ? `cached (${formatAge(status.cache.spotAssetCtxsAge)} ago)` : "not loaded"}`,
+          )
         }
       } catch (err) {
         // Server might be in bad state

@@ -48,7 +48,7 @@ export function registerPricesCommand(markets: Command): void {
           } catch {
             serverClient.close()
             const client = ctx.getPublicClient()
-            mids = await client.allMids()
+            mids = await client.allMids({ dex: "ALL_DEXS" })
           }
         } else {
           const client = ctx.getPublicClient()
