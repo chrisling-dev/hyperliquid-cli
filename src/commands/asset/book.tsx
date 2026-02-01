@@ -30,7 +30,13 @@ interface BookDisplayProps {
   lastUpdated?: Date
 }
 
-function BookDisplay({ coin, bids, asks, isWatch, lastUpdated }: BookDisplayProps): React.ReactElement {
+function BookDisplay({
+  coin,
+  bids,
+  asks,
+  isWatch,
+  lastUpdated,
+}: BookDisplayProps): React.ReactElement {
   const displayAsks = asks.slice(0, MAX_LEVELS).reverse()
   const displayBids = bids.slice(0, MAX_LEVELS)
 
@@ -50,12 +56,15 @@ function BookDisplay({ coin, bids, asks, isWatch, lastUpdated }: BookDisplayProp
   // Find max cumulative for scaling (use same scale for both sides)
   const maxCumulative = Math.max(
     asksWithCumulative[asksWithCumulative.length - 1]?.cumulative || 0,
-    bidsWithCumulative[bidsWithCumulative.length - 1]?.cumulative || 0
+    bidsWithCumulative[bidsWithCumulative.length - 1]?.cumulative || 0,
   )
 
-  const spread = displayAsks.length > 0 && displayBids.length > 0
-    ? (parseFloat(displayAsks[displayAsks.length - 1].px) - parseFloat(displayBids[0].px)).toFixed(2)
-    : null
+  const spread =
+    displayAsks.length > 0 && displayBids.length > 0
+      ? (
+          parseFloat(displayAsks[displayAsks.length - 1].px) - parseFloat(displayBids[0].px)
+        ).toFixed(2)
+      : null
 
   const totalWidth = PRICE_WIDTH + SIZE_WIDTH + ORDERS_WIDTH + BAR_WIDTH + 6 // 6 for spacing
 
@@ -64,7 +73,9 @@ function BookDisplay({ coin, bids, asks, isWatch, lastUpdated }: BookDisplayProp
       {isWatch && <WatchHeader title={`${coin} Order Book`} lastUpdated={lastUpdated} />}
       {!isWatch && (
         <Box marginBottom={1}>
-          <Text bold color={colors.header}>{coin} Order Book</Text>
+          <Text bold color={colors.header}>
+            {coin} Order Book
+          </Text>
         </Box>
       )}
 
@@ -73,15 +84,15 @@ function BookDisplay({ coin, bids, asks, isWatch, lastUpdated }: BookDisplayProp
         <Box width={PRICE_WIDTH}>
           <Text color={colors.muted}>{"price".padEnd(PRICE_WIDTH)}</Text>
         </Box>
-        <Text>  </Text>
+        <Text> </Text>
         <Box width={SIZE_WIDTH}>
           <Text color={colors.muted}>{"size".padEnd(SIZE_WIDTH)}</Text>
         </Box>
-        <Text>  </Text>
+        <Text> </Text>
         <Box width={ORDERS_WIDTH}>
           <Text color={colors.muted}>{"#".padEnd(ORDERS_WIDTH)}</Text>
         </Box>
-        <Text>  </Text>
+        <Text> </Text>
         <Box width={BAR_WIDTH}>
           <Text color={colors.muted}>{"depth".padEnd(BAR_WIDTH)}</Text>
         </Box>
@@ -94,15 +105,15 @@ function BookDisplay({ coin, bids, asks, isWatch, lastUpdated }: BookDisplayProp
             <Box width={PRICE_WIDTH}>
               <Text color={colors.loss}>{level.px.padEnd(PRICE_WIDTH)}</Text>
             </Box>
-            <Text>  </Text>
+            <Text> </Text>
             <Box width={SIZE_WIDTH}>
               <Text>{level.sz.padEnd(SIZE_WIDTH)}</Text>
             </Box>
-            <Text>  </Text>
+            <Text> </Text>
             <Box width={ORDERS_WIDTH}>
               <Text color={colors.muted}>{String(level.n).padEnd(ORDERS_WIDTH)}</Text>
             </Box>
-            <Text>  </Text>
+            <Text> </Text>
             <Box width={BAR_WIDTH}>
               <Text color={colors.loss}>
                 {createDepthBar(level.cumulative / maxCumulative, BAR_WIDTH)}
@@ -117,7 +128,9 @@ function BookDisplay({ coin, bids, asks, isWatch, lastUpdated }: BookDisplayProp
       {/* Spread indicator */}
       {spread && (
         <Box>
-          <Text color={colors.warning}>{"─".repeat(totalWidth / 2)} spread: {spread} {"─".repeat(totalWidth / 2)}</Text>
+          <Text color={colors.warning}>
+            {"─".repeat(totalWidth / 2)} spread: {spread} {"─".repeat(totalWidth / 2)}
+          </Text>
         </Box>
       )}
 
@@ -128,15 +141,15 @@ function BookDisplay({ coin, bids, asks, isWatch, lastUpdated }: BookDisplayProp
             <Box width={PRICE_WIDTH}>
               <Text color={colors.profit}>{level.px.padEnd(PRICE_WIDTH)}</Text>
             </Box>
-            <Text>  </Text>
+            <Text> </Text>
             <Box width={SIZE_WIDTH}>
               <Text>{level.sz.padEnd(SIZE_WIDTH)}</Text>
             </Box>
-            <Text>  </Text>
+            <Text> </Text>
             <Box width={ORDERS_WIDTH}>
               <Text color={colors.muted}>{String(level.n).padEnd(ORDERS_WIDTH)}</Text>
             </Box>
-            <Text>  </Text>
+            <Text> </Text>
             <Box width={BAR_WIDTH}>
               <Text color={colors.profit}>
                 {createDepthBar(level.cumulative / maxCumulative, BAR_WIDTH)}
@@ -218,7 +231,7 @@ export function registerBookCommand(asset: Command): void {
     .action(async function (this: Command, coin: string, options: { watch?: boolean }) {
       const ctx = getContext(this)
       const outputOpts = getOutputOptions(this)
-      const coinUpper = coin.toUpperCase()
+      const coinUpper = coin
 
       try {
         if (options.watch) {
@@ -227,7 +240,7 @@ export function registerBookCommand(asset: Command): void {
           }
 
           const { unmount, waitUntilExit } = render(
-            <WatchBook coin={coinUpper} isTestnet={ctx.config.testnet} isJson={outputOpts.json} />
+            <WatchBook coin={coinUpper} isTestnet={ctx.config.testnet} isJson={outputOpts.json} />,
           )
 
           const cleanup = () => {
@@ -267,7 +280,7 @@ export function registerBookCommand(asset: Command): void {
           output(book, outputOpts)
         } else {
           const { unmount, waitUntilExit } = render(
-            <BookDisplay coin={coinUpper} bids={bookBids} asks={bookAsks} />
+            <BookDisplay coin={coinUpper} bids={bookBids} asks={bookAsks} />,
           )
           await waitUntilExit()
           unmount()

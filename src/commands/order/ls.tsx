@@ -141,7 +141,7 @@ export function registerLsCommand(order: Command): void {
           }
 
           const { unmount, waitUntilExit } = render(
-            <WatchOrders user={user} isTestnet={ctx.config.testnet} isJson={outputOpts.json} />
+            <WatchOrders user={user} isTestnet={ctx.config.testnet} isJson={outputOpts.json} />,
           )
 
           const cleanup = () => {
@@ -165,7 +165,7 @@ export function registerLsCommand(order: Command): void {
         }
 
         const client = ctx.getPublicClient()
-        const orders = await client.openOrders({ user })
+        const orders = await client.openOrders({ user, dex: "ALL_DEXS" })
 
         type Order = {
           oid: number

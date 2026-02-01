@@ -22,7 +22,7 @@ export function registerMarketCommand(order: Command): void {
       options: {
         reduceOnly?: boolean
         slippage?: string
-      }
+      },
     ) {
       const ctx = getContext(this)
       const outputOpts = getOutputOptions(this)
@@ -44,14 +44,12 @@ export function registerMarketCommand(order: Command): void {
 
         // Market order: IOC at mid price + slippage
         const mids = await publicClient.allMids()
-        const midPrice = parseFloat(mids[coin.toUpperCase()])
+        const midPrice = parseFloat(mids[coin])
         if (!midPrice) {
           throw new Error(`Cannot get mid price for ${coin}`)
         }
 
-        const limitPx = isBuy
-          ? midPrice * (1 + slippagePct)
-          : midPrice * (1 - slippagePct)
+        const limitPx = isBuy ? midPrice * (1 + slippagePct) : midPrice * (1 - slippagePct)
 
         const orderRequest = {
           orders: [
@@ -77,9 +75,7 @@ export function registerMarketCommand(order: Command): void {
             if (typeof status === "string") {
               outputSuccess(`Order status: ${status}`)
             } else if ("filled" in status) {
-              outputSuccess(
-                `Order filled: ${status.filled.totalSz} @ ${status.filled.avgPx}`
-              )
+              outputSuccess(`Order filled: ${status.filled.totalSz} @ ${status.filled.avgPx}`)
             } else if ("resting" in status) {
               outputSuccess(`Order placed: ID ${status.resting.oid}`)
             }

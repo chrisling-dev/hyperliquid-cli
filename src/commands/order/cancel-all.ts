@@ -2,6 +2,7 @@ import { Command } from "commander"
 import { getContext, getOutputOptions } from "../../cli/program.js"
 import { output, outputError, outputSuccess } from "../../cli/output.js"
 import { confirm } from "../../lib/prompts.js"
+import { getAssetIndex } from "./shared.js"
 
 export function registerCancelAllCommand(order: Command): void {
   order
@@ -9,10 +10,7 @@ export function registerCancelAllCommand(order: Command): void {
     .description("Cancel all open orders")
     .option("-y, --yes", "Skip confirmation prompt")
     .option("--coin <coin>", "Only cancel orders for a specific coin")
-    .action(async function (
-      this: Command,
-      options: { yes?: boolean; coin?: string }
-    ) {
+    .action(async function (this: Command, options: { yes?: boolean; coin?: string }) {
       const ctx = getContext(this)
       const outputOpts = getOutputOptions(this)
 
@@ -22,7 +20,7 @@ export function registerCancelAllCommand(order: Command): void {
         const user = ctx.getWalletAddress()
 
         // Fetch open orders
-        const orders = await publicClient.openOrders({ user })
+        const orders = await publicClient.openOrders({ user, dex: "ALL_DEXS" })
 
         if (orders.length === 0) {
           outputSuccess("No open orders to cancel")
@@ -40,11 +38,9 @@ export function registerCancelAllCommand(order: Command): void {
 
         let ordersToCancel: Order[] = orders
         if (options.coin) {
-          ordersToCancel = orders.filter(
-            (o: Order) => o.coin.toUpperCase() === options.coin!.toUpperCase()
-          )
+          ordersToCancel = orders.filter((o: Order) => o.coin === options.coin)
           if (ordersToCancel.length === 0) {
-            outputSuccess(`No open orders for ${options.coin.toUpperCase()}`)
+            outputSuccess(`No open orders for ${options.coin}`)
             return
           }
         }
@@ -52,7 +48,7 @@ export function registerCancelAllCommand(order: Command): void {
         // Confirm unless --yes flag
         if (!options.yes) {
           const confirmMsg = options.coin
-            ? `Cancel all ${ordersToCancel.length} orders for ${options.coin.toUpperCase()}?`
+            ? `Cancel all ${ordersToCancel.length} orders for ${options.coin}?`
             : `Cancel all ${ordersToCancel.length} open orders?`
 
           const confirmed = await confirm(confirmMsg, false)
@@ -62,16 +58,13 @@ export function registerCancelAllCommand(order: Command): void {
           }
         }
 
-        // Get meta for asset indices
-        const meta = await publicClient.meta()
-
-        // Build cancel requests
-        const cancels = ordersToCancel.map((o: Order) => {
-          const assetIndex = meta.universe.findIndex(
-            (a: { name: string }) => a.name.toUpperCase() === o.coin.toUpperCase()
-          )
-          return { a: assetIndex, o: o.oid }
-        })
+        // Build cancel requests with asset indices
+        const cancels = await Promise.all(
+          ordersToCancel.map(async (o: Order) => {
+            const assetIndex = await getAssetIndex(publicClient, o.coin)
+            return { a: assetIndex, o: o.oid }
+          })
+        )
 
         const result = await client.cancel({ cancels })
 

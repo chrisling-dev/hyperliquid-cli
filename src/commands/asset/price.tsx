@@ -15,12 +15,19 @@ interface PriceDisplayProps {
   lastUpdated?: Date
 }
 
-function PriceDisplay({ coin, price, isWatch, lastUpdated }: PriceDisplayProps): React.ReactElement {
+function PriceDisplay({
+  coin,
+  price,
+  isWatch,
+  lastUpdated,
+}: PriceDisplayProps): React.ReactElement {
   return (
     <Box flexDirection="column">
       {isWatch && <WatchHeader title={`${coin} Price`} lastUpdated={lastUpdated} />}
       <Box>
-        <Text bold color={colors.header}>{coin}</Text>
+        <Text bold color={colors.header}>
+          {coin}
+        </Text>
         <Text>: </Text>
         <Text bold>{price}</Text>
       </Box>
@@ -46,7 +53,9 @@ function WatchPrice({ coin, isTestnet, isJson }: WatchPriceProps): React.ReactEl
       isTestnet,
       onUpdate: (newPrice) => {
         if (isJson) {
-          console.log(JSON.stringify({ coin, price: newPrice, timestamp: new Date().toISOString() }))
+          console.log(
+            JSON.stringify({ coin, price: newPrice, timestamp: new Date().toISOString() }),
+          )
           return
         }
         setPrice(newPrice)
@@ -78,9 +87,7 @@ function WatchPrice({ coin, isTestnet, isJson }: WatchPriceProps): React.ReactEl
     return <Text color={colors.muted}>Streaming JSON...</Text>
   }
 
-  return (
-    <PriceDisplay coin={coin} price={price} isWatch={true} lastUpdated={lastUpdated} />
-  )
+  return <PriceDisplay coin={coin} price={price} isWatch={true} lastUpdated={lastUpdated} />
 }
 
 export function registerPriceCommand(asset: Command): void {
@@ -92,7 +99,7 @@ export function registerPriceCommand(asset: Command): void {
     .action(async function (this: Command, coin: string, options: { watch?: boolean }) {
       const ctx = getContext(this)
       const outputOpts = getOutputOptions(this)
-      const coinUpper = coin.toUpperCase()
+      const coinUpper = coin
 
       try {
         if (options.watch) {
@@ -101,7 +108,7 @@ export function registerPriceCommand(asset: Command): void {
           }
 
           const { unmount, waitUntilExit } = render(
-            <WatchPrice coin={coinUpper} isTestnet={ctx.config.testnet} isJson={outputOpts.json} />
+            <WatchPrice coin={coinUpper} isTestnet={ctx.config.testnet} isJson={outputOpts.json} />,
           )
 
           const cleanup = () => {

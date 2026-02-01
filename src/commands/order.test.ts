@@ -35,6 +35,8 @@ describe("order commands", () => {
 
   let mockInfoClient: {
     meta: Mock
+    allPerpMetas: Mock
+    spotMeta: Mock
     allMids: Mock
     openOrders: Mock
   }
@@ -53,6 +55,37 @@ describe("order commands", () => {
     ],
   }
 
+  // allPerpMetas is an array: index 0 = main dex, index 1+ = builder dexes
+  const mockAllPerpMetas = [
+    // Main dex (index 0)
+    {
+      universe: [
+        { name: "BTC", szDecimals: 4, maxLeverage: 50 },
+        { name: "ETH", szDecimals: 3, maxLeverage: 50 },
+        { name: "SOL", szDecimals: 2, maxLeverage: 20 },
+      ],
+    },
+    // Builder dex (index 1) - e.g., "test" dex
+    {
+      universe: [
+        { name: "test:ABC", szDecimals: 2, maxLeverage: 10 },
+        { name: "test:XYZ", szDecimals: 2, maxLeverage: 10 },
+      ],
+    },
+  ]
+
+  const mockSpotMeta = {
+    universe: [
+      { name: "PURR/USDC", tokens: [0, 1] },
+      { name: "HYPE/USDC", tokens: [2, 1] },
+    ],
+    tokens: [
+      { name: "PURR" },
+      { name: "USDC" },
+      { name: "HYPE" },
+    ],
+  }
+
   beforeEach(() => {
     vi.resetAllMocks()
 
@@ -64,7 +97,9 @@ describe("order commands", () => {
 
     mockInfoClient = {
       meta: vi.fn(() => Promise.resolve(mockMeta)),
-      allMids: vi.fn(() => Promise.resolve({ BTC: "50000", ETH: "3000", SOL: "100" })),
+      allPerpMetas: vi.fn(() => Promise.resolve(mockAllPerpMetas)),
+      spotMeta: vi.fn(() => Promise.resolve(mockSpotMeta)),
+      allMids: vi.fn(() => Promise.resolve({ BTC: "50000", ETH: "3000", SOL: "100", "PURR/USDC": "0.05", "test:ABC": "1.5" })),
       openOrders: vi.fn(() => Promise.resolve([])),
     }
 
@@ -107,14 +142,38 @@ describe("order commands", () => {
     })
 
     describe("getAssetIndex", () => {
-      it("should return correct index for known coin", async () => {
+      it("should return correct index for main perp coin (BTC = 0)", async () => {
         const index = await getAssetIndex(mockInfoClient, "BTC")
         expect(index).toBe(0)
       })
 
-      it("should return correct index case-insensitively", async () => {
-        const index = await getAssetIndex(mockInfoClient, "btc")
-        expect(index).toBe(0)
+      it("should return correct index for main perp coin (ETH = 1)", async () => {
+        const index = await getAssetIndex(mockInfoClient, "ETH")
+        expect(index).toBe(1)
+      })
+
+      it("should return 10000 + index for spot assets", async () => {
+        const index = await getAssetIndex(mockInfoClient, "PURR/USDC")
+        expect(index).toBe(10000) // 10000 + 0
+      })
+
+      it("should return correct spot index for second spot pair", async () => {
+        const index = await getAssetIndex(mockInfoClient, "HYPE/USDC")
+        expect(index).toBe(10001) // 10000 + 1
+      })
+
+      it("should return 100000 + dex_index * 10000 + market_index for builder perps", async () => {
+        // test:ABC is in dex index 1, market index 0
+        // Formula: 100000 + 1 * 10000 + 0 = 110000
+        const index = await getAssetIndex(mockInfoClient, "test:ABC")
+        expect(index).toBe(110000)
+      })
+
+      it("should return correct builder perp index for second market", async () => {
+        // test:XYZ is in dex index 1, market index 1
+        // Formula: 100000 + 1 * 10000 + 1 = 110001
+        const index = await getAssetIndex(mockInfoClient, "test:XYZ")
+        expect(index).toBe(110001)
       })
 
       it("should throw error for unknown coin", async () => {
@@ -197,11 +256,7 @@ describe("order commands", () => {
       const price = validatePositiveNumber("50000", "price")
       const tif = validateTif("Gtc")
 
-      const meta = await mockContext.getPublicClient().meta()
-      const assetIndex = meta.universe.findIndex(
-        (a: { name: string }) => a.name.toUpperCase() === coin.toUpperCase()
-      )
-
+      const assetIndex = await getAssetIndex(mockContext.getPublicClient(), coin)
       expect(assetIndex).toBe(0)
 
       const orderRequest = {
@@ -298,10 +353,7 @@ describe("order commands", () => {
       const orderId = validatePositiveInteger("12345", "order-id")
       expect(orderId).toBe(12345)
 
-      const meta = await mockContext.getPublicClient().meta()
-      const assetIndex = meta.universe.findIndex(
-        (a: { name: string }) => a.name.toUpperCase() === "BTC"
-      )
+      const assetIndex = await getAssetIndex(mockContext.getPublicClient(), "BTC")
 
       const cancelRequest = {
         cancels: [{ a: assetIndex, o: orderId }],
@@ -334,10 +386,7 @@ describe("order commands", () => {
       const leverage = validatePositiveInteger("10", "leverage")
       expect(leverage).toBe(10)
 
-      const meta = await mockContext.getPublicClient().meta()
-      const assetIndex = meta.universe.findIndex(
-        (a: { name: string }) => a.name.toUpperCase() === "BTC"
-      )
+      const assetIndex = await getAssetIndex(mockContext.getPublicClient(), "BTC")
 
       const leverageRequest = {
         asset: assetIndex,

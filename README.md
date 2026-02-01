@@ -10,19 +10,16 @@ Features a beautiful terminal UI with real-time watch modes powered by [Ink](htt
 npm install -g hyperliquid-cli
 ```
 
-## Configuration
+## Features
 
-### Environment Variables
+- **Multi-Account Management** - Store and manage multiple trading accounts locally with SQLite
+- **Real-Time Monitoring** - WebSocket-powered live updates for positions, orders, balances, and prices
+- **Beautiful Terminal UI** - Color-coded PnL, depth visualization, and interactive tables
+- **Trading Support** - Place limit, market, stop-loss, and take-profit orders
+- **Scripting Friendly** - JSON output mode for automation and scripting
+- **Testnet Support** - Seamless switching between mainnet and testnet
 
-```bash
-# Required for trading commands
-export HYPERLIQUID_PRIVATE_KEY=0x...
-
-# Optional: explicitly set wallet address (derived from key if not provided)
-export HYPERLIQUID_WALLET_ADDRESS=0x...
-```
-
-### Global Options
+## Global Options
 
 | Option | Description |
 |--------|-------------|
@@ -31,13 +28,89 @@ export HYPERLIQUID_WALLET_ADDRESS=0x...
 | `-V, --version` | Show version number |
 | `-h, --help` | Show help |
 
-## Commands
+---
 
-### Account Commands
+## Account Management
 
-View account information with optional real-time watch mode.
+Manage multiple trading accounts locally. Accounts are stored in a SQLite database at `~/.hyperliquid/accounts.db`.
 
-#### Get Positions
+### Add Account
+
+Interactive wizard to add a new account:
+
+```bash
+hl account add
+```
+
+- Import API wallets from Hyperliquid for trading
+- Add read-only accounts for monitoring only
+- Set account aliases for easy identification
+- Choose default account for commands
+
+### List Accounts
+
+```bash
+hl account ls
+```
+
+Shows all configured accounts with alias, address, type, and default status.
+
+### Set Default Account
+
+```bash
+hl account set-default
+```
+
+Interactively select which account to use by default.
+
+### Remove Account
+
+```bash
+hl account remove
+```
+
+Interactively remove an account from local storage.
+
+---
+
+## Balance & Portfolio Monitoring
+
+View account balances and portfolio with optional real-time watch mode.
+
+### Get Balances
+
+```bash
+# Spot + perpetuals balances
+hl account balances
+
+# Watch mode - real-time updates
+hl account balances -w
+
+# Specific address
+hl account balances --user 0x...
+```
+
+Shows spot token balances (total, hold, available) and perpetuals USD balance.
+
+### Get Full Portfolio
+
+```bash
+# Positions + spot balances combined
+hl account portfolio
+
+# Watch mode
+hl account portfolio -w
+```
+
+Combined view of all positions and spot balances in a single display.
+
+---
+
+## Position Monitoring
+
+View and monitor perpetual positions.
+
+### Get Positions
 
 ```bash
 # One-time fetch
@@ -50,58 +123,160 @@ hl account positions -w
 hl account positions --user 0x...
 ```
 
-#### Get Open Orders
+Displays: coin, size, entry price, position value, unrealized PnL, leverage, and liquidation price.
+
+---
+
+## Order Management
+
+View, place, and cancel orders.
+
+### View Open Orders
 
 ```bash
 hl account orders
-hl account orders --user 0x...
 
 # Watch mode - real-time order updates
 hl account orders -w
+
+# Specific address
+hl account orders --user 0x...
 ```
 
-#### Get Balances
+Or use the trade command:
 
 ```bash
-# Spot + perps balances
-hl account balances
-
-# Watch mode
-hl account balances -w
+hl trade order ls
 ```
 
-#### Get Full Portfolio
+### Place Limit Order
 
 ```bash
-# Positions + spot balances combined
-hl account portfolio
+hl trade order limit <side> <size> <coin> <price>
 
-# Watch mode
-hl account portfolio -w
+# Examples
+hl trade order limit buy 0.001 BTC 50000
+hl trade order limit sell 0.1 ETH 3500 --tif Gtc
+hl trade order limit long 1 SOL 100 --reduce-only
 ```
 
-### Markets Commands
+| Option | Description |
+|--------|-------------|
+| `--tif <tif>` | Time-in-force: `Gtc` (default), `Ioc`, `Alo` |
+| `--reduce-only` | Reduce-only order |
 
-View market information.
+### Place Market Order
 
-#### List All Markets
+```bash
+hl trade order market <side> <size> <coin>
+
+# Examples
+hl trade order market buy 0.001 BTC
+hl trade order market sell 0.1 ETH --slippage 0.5
+```
+
+| Option | Description |
+|--------|-------------|
+| `--slippage <pct>` | Slippage percentage (default: 1%) |
+| `--reduce-only` | Reduce-only order |
+
+### Place Stop-Loss Order
+
+```bash
+hl trade order stop-loss <side> <size> <coin> <price> <trigger>
+
+# Examples
+hl trade order stop-loss sell 0.001 BTC 48000 49000
+hl trade order stop-loss sell 0.001 BTC 48000 49000 --tpsl
+```
+
+### Place Take-Profit Order
+
+```bash
+hl trade order take-profit <side> <size> <coin> <price> <trigger>
+
+# Examples
+hl trade order take-profit sell 0.001 BTC 55000 54000
+hl trade order take-profit sell 0.001 BTC 55000 54000 --tpsl
+```
+
+### Configure Order Defaults
+
+```bash
+# View current configuration
+hl trade order configure
+
+# Set default slippage for market orders
+hl trade order configure --slippage 0.5
+```
+
+### Cancel Order
+
+```bash
+# Cancel specific order
+hl trade cancel <oid>
+
+# Interactive selection from open orders
+hl trade cancel
+```
+
+### Cancel All Orders
+
+```bash
+# Cancel all open orders
+hl trade cancel-all
+
+# Cancel all orders for a specific coin
+hl trade cancel-all --coin BTC
+
+# Skip confirmation
+hl trade cancel-all -y
+```
+
+### Set Leverage
+
+```bash
+# Cross margin (default)
+hl trade set-leverage <coin> <leverage>
+hl trade set-leverage BTC 10
+
+# Isolated margin
+hl trade set-leverage BTC 10 --isolated
+
+# Explicit cross margin
+hl trade set-leverage ETH 5 --cross
+```
+
+---
+
+## Market Information
+
+View market data without authentication.
+
+### List All Markets
 
 ```bash
 # List all perpetual and spot markets
 hl markets ls
 ```
 
-#### Get All Prices
+Shows market metadata including leverage info, price decimals, and trading pairs.
+
+### Get All Prices
 
 ```bash
 hl markets prices
 ```
 
-### Asset Commands
+Returns mid prices for all available assets.
 
-View asset-specific information with optional watch mode.
+---
 
-#### Get Price
+## Asset Information
+
+View asset-specific data with optional watch mode.
+
+### Get Price
 
 ```bash
 # One-time fetch
@@ -111,7 +286,7 @@ hl asset price BTC
 hl asset price BTC -w
 ```
 
-#### Get Order Book
+### Get Order Book
 
 ```bash
 # One-time fetch with depth visualization
@@ -121,96 +296,64 @@ hl asset book BTC
 hl asset book ETH -w
 ```
 
-### Trade Commands (Requires authentication)
+Shows top bid/ask levels with cumulative depth bars and spread calculation.
 
-#### Place Orders
+---
 
-**Limit Order (default):**
+## Referral System
 
-```bash
-hl trade order BTC buy 0.001 50000
-hl trade order ETH sell 0.1 3500 --tif Gtc
-hl trade order SOL buy 1 100 --reduce-only
-```
-
-**Market Order:**
+### Set Referral Code
 
 ```bash
-hl trade order BTC buy 0.001 --type market
-hl trade order ETH sell 0.1 --type market --slippage 0.5
+hl referral set <code>
 ```
 
-**Stop-Loss Order:**
-
-```bash
-hl trade order BTC sell 0.001 48000 --type stop-loss --trigger 49000
-hl trade order BTC sell 0.001 48000 --type stop-loss --trigger 49000 --tpsl
-```
-
-**Take-Profit Order:**
-
-```bash
-hl trade order BTC sell 0.001 55000 --type take-profit --trigger 54000
-hl trade order BTC sell 0.001 55000 --type take-profit --trigger 54000 --tpsl
-```
-
-**Order Options:**
-
-| Option | Description |
-|--------|-------------|
-| `--type <type>` | Order type: `limit` (default), `market`, `stop-loss`, `take-profit` |
-| `--tif <tif>` | Time-in-force: `Gtc` (default), `Ioc`, `Alo` |
-| `--reduce-only` | Reduce-only order |
-| `--slippage <pct>` | Slippage percentage for market orders (default: 1%) |
-| `--trigger <price>` | Trigger price for stop-loss/take-profit orders |
-| `--tpsl` | Mark as TP/SL order for position management |
-
-#### Cancel Orders
-
-```bash
-hl trade cancel BTC 12345
-```
-
-#### Set Leverage
-
-```bash
-# Cross margin (default)
-hl trade leverage BTC 10
-
-# Isolated margin
-hl trade leverage BTC 10 --isolated
-
-# Explicit cross margin
-hl trade leverage ETH 5 --cross
-```
-
-### Referral Commands
-
-#### Set Referral Code
-
-```bash
-hl referral set MYCODE
-```
-
-#### Get Referral Status
+### Get Referral Status
 
 ```bash
 hl referral status
 ```
+
+---
+
+## Background Server
+
+Optional background server for caching market data and faster queries.
+
+### Start Server
+
+```bash
+hl server start
+```
+
+Runs a detached WebSocket server that caches market data.
+
+### Stop Server
+
+```bash
+hl server stop
+```
+
+### Check Status
+
+```bash
+hl server status
+```
+
+Shows server status, WebSocket connection state, uptime, and cache status.
+
+---
 
 ## Examples
 
 ### Testnet Trading
 
 ```bash
-# Set testnet private key
-export HYPERLIQUID_PRIVATE_KEY=0x...
-
 # Check positions on testnet
 hl --testnet account positions
 
 # Place a testnet order
-hl --testnet trade order BTC buy 0.001 50000
+hl --testnet trade order limit buy 0.001 BTC 50000
 ```
 
 ### Real-Time Monitoring
@@ -252,8 +395,31 @@ SIZE="0.001"
 PRICE="85000"
 
 echo "Placing $SIDE order for $SIZE $COIN @ $PRICE"
-hl trade order $COIN $SIDE $SIZE $PRICE --json
+hl trade order limit $SIDE $SIZE $COIN $PRICE --json
 ```
+
+---
+
+## Configuration
+
+### Environment Variables
+
+```bash
+# Required for trading commands (if not using account management)
+export HYPERLIQUID_PRIVATE_KEY=0x...
+
+# Optional: explicitly set wallet address (derived from key if not provided)
+export HYPERLIQUID_WALLET_ADDRESS=0x...
+```
+
+### Local Storage
+
+| Path | Description |
+|------|-------------|
+| `~/.hyperliquid/accounts.db` | SQLite database for account management |
+| `~/.hyperliquid/order-config.json` | Order configuration (default slippage, etc.) |
+
+---
 
 ## Development
 
@@ -296,8 +462,6 @@ pnpm lint
 
 ```
 hyperliquid-cli/
-├── package.json
-├── tsconfig.json
 ├── src/
 │   ├── index.ts                    # Entry point
 │   ├── cli/
@@ -309,32 +473,21 @@ hyperliquid-cli/
 │   │       ├── theme.ts            # Color theme
 │   │       ├── render.tsx          # Render utilities
 │   │       └── components/         # React components
-│   │           ├── Table.tsx
-│   │           ├── PnL.tsx
-│   │           ├── WatchHeader.tsx
-│   │           └── Spinner.tsx
 │   ├── commands/
-│   │   ├── index.ts                # Command registration
-│   │   ├── account/                # positions, orders, balances, portfolio
+│   │   ├── account/                # add, ls, remove, set-default, positions, orders, balances, portfolio
+│   │   ├── order/                  # limit, market, stop-loss, take-profit, cancel, cancel-all, set-leverage
 │   │   ├── markets/                # ls, prices
 │   │   ├── asset/                  # price, book
 │   │   ├── referral/               # set, status
-│   │   ├── trade.ts                # order, cancel, leverage
 │   │   └── server.ts               # start, stop, status
 │   ├── lib/
 │   │   ├── config.ts               # Environment config
 │   │   ├── validation.ts           # Input validation
-│   │   ├── position-watcher.ts     # WebSocket position watcher
-│   │   ├── balance-watcher.ts      # Balance watcher
-│   │   ├── portfolio-watcher.ts    # Portfolio watcher
-│   │   ├── price-watcher.ts        # Price watcher
-│   │   └── book-watcher.ts         # Order book watcher
-│   ├── client/
-│   │   └── index.ts                # Server client
-│   └── server/
-│       ├── index.ts                # Background server
-│       ├── cache.ts                # Data cache
-│       └── subscriptions.ts        # WebSocket subscriptions
+│   │   ├── db/                     # SQLite database for accounts
+│   │   ├── *-watcher.ts            # WebSocket watchers (positions, orders, balances, prices, book)
+│   │   └── ...
+│   ├── client/                     # Server client
+│   └── server/                     # Background server
 ```
 
 ## License

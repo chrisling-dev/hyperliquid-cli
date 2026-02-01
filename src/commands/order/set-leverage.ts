@@ -16,7 +16,7 @@ export function registerSetLeverageCommand(order: Command): void {
       this: Command,
       coin: string,
       leverageArg: string,
-      options: { cross?: boolean; isolated?: boolean }
+      options: { cross?: boolean; isolated?: boolean },
     ) {
       const ctx = getContext(this)
       const outputOpts = getOutputOptions(this)
@@ -41,7 +41,7 @@ export function registerSetLeverageCommand(order: Command): void {
           output(result, outputOpts)
         } else {
           outputSuccess(
-            `Leverage set to ${leverage}x (${isCross ? "cross" : "isolated"}) for ${coin.toUpperCase()}`
+            `Leverage set to ${leverage}x (${isCross ? "cross" : "isolated"}) for ${coin}`,
           )
         }
       } catch (err) {

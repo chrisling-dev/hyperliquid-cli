@@ -8,7 +8,7 @@ import { createAccount, getAccountCount, isAliasTaken } from "../../lib/db/index
 import { validateApiKey } from "../../lib/api-wallet.js"
 import type { Hex } from "viem"
 
-const REFERRAL_LINK = "https://app.hyperliquid.xyz/join/HYPERLIQUIDCLI"
+const REFERRAL_LINK = "https://app.hyperliquid.xyz/join/CHRISLING"
 
 type SetupMethod = "existing" | "new" | "readonly"
 

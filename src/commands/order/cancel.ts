@@ -3,6 +3,7 @@ import { getContext, getOutputOptions } from "../../cli/program.js"
 import { output, outputError, outputSuccess } from "../../cli/output.js"
 import { validatePositiveInteger } from "../../lib/validation.js"
 import { select } from "../../lib/prompts.js"
+import { getAssetIndex } from "./shared.js"
 
 export function registerCancelCommand(order: Command): void {
   order
@@ -26,26 +27,17 @@ export function registerCancelCommand(order: Command): void {
           orderId = validatePositiveInteger(oidArg, "oid")
 
           // Fetch open orders to find the asset index for this order
-          const orders = await publicClient.openOrders({ user })
-          const orderToCancel = orders.find(
-            (o: { oid: number }) => o.oid === orderId
-          )
+          const orders = await publicClient.openOrders({ user, dex: "ALL_DEXS" })
+          const orderToCancel = orders.find((o: { oid: number }) => o.oid === orderId)
 
           if (!orderToCancel) {
             throw new Error(`Order ${orderId} not found in open orders`)
           }
 
-          const meta = await publicClient.meta()
-          assetIndex = meta.universe.findIndex(
-            (a: { name: string }) =>
-              a.name.toUpperCase() === orderToCancel.coin.toUpperCase()
-          )
-          if (assetIndex === -1) {
-            throw new Error(`Unknown coin: ${orderToCancel.coin}`)
-          }
+          assetIndex = await getAssetIndex(publicClient, orderToCancel.coin)
         } else {
           // Interactive mode: select from open orders
-          const orders = await publicClient.openOrders({ user })
+          const orders = await publicClient.openOrders({ user, dex: "ALL_DEXS" })
 
           if (orders.length === 0) {
             outputSuccess("No open orders to cancel")
@@ -68,17 +60,8 @@ export function registerCancelCommand(order: Command): void {
           const selectedOid = await select("Select order to cancel:", options)
           orderId = parseInt(selectedOid, 10)
 
-          const selectedOrder = orders.find(
-            (o: Order) => o.oid === orderId
-          ) as Order
-          const meta = await publicClient.meta()
-          assetIndex = meta.universe.findIndex(
-            (a: { name: string }) =>
-              a.name.toUpperCase() === selectedOrder.coin.toUpperCase()
-          )
-          if (assetIndex === -1) {
-            throw new Error(`Unknown coin: ${selectedOrder.coin}`)
-          }
+          const selectedOrder = orders.find((o: Order) => o.oid === orderId) as Order
+          assetIndex = await getAssetIndex(publicClient, selectedOrder.coin)
         }
 
         const result = await client.cancel({
