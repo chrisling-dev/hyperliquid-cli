@@ -37,15 +37,19 @@ function BookDisplay({
   isWatch,
   lastUpdated,
 }: BookDisplayProps): React.ReactElement {
-  const displayAsks = asks.slice(0, MAX_LEVELS).reverse()
   const displayBids = bids.slice(0, MAX_LEVELS)
 
   // Calculate cumulative sizes for depth
+  // For asks: calculate cumulative from best ask (lowest price) BEFORE reversing for display
+  // This ensures depth bars build away from the spread (smallest bar at best ask)
+  const asksToProcess = asks.slice(0, MAX_LEVELS)
   let askCumulative = 0
-  const asksWithCumulative = displayAsks.map((level) => {
-    askCumulative += parseFloat(level.sz)
-    return { ...level, cumulative: askCumulative }
-  })
+  const asksWithCumulative = asksToProcess
+    .map((level) => {
+      askCumulative += parseFloat(level.sz)
+      return { ...level, cumulative: askCumulative }
+    })
+    .reverse() // Reverse after cumulative calc for display (highest price at top)
 
   let bidCumulative = 0
   const bidsWithCumulative = displayBids.map((level) => {
@@ -54,15 +58,18 @@ function BookDisplay({
   })
 
   // Find max cumulative for scaling (use same scale for both sides)
+  // After reversing asks, first element has max cumulative (worst ask at top)
   const maxCumulative = Math.max(
-    asksWithCumulative[asksWithCumulative.length - 1]?.cumulative || 0,
+    asksWithCumulative[0]?.cumulative || 0,
     bidsWithCumulative[bidsWithCumulative.length - 1]?.cumulative || 0,
   )
 
+  // Best ask is now last element after reversing (closest to spread)
   const spread =
-    displayAsks.length > 0 && displayBids.length > 0
+    asksWithCumulative.length > 0 && displayBids.length > 0
       ? (
-          parseFloat(displayAsks[displayAsks.length - 1].px) - parseFloat(displayBids[0].px)
+          parseFloat(asksWithCumulative[asksWithCumulative.length - 1].px) -
+          parseFloat(displayBids[0].px)
         ).toFixed(2)
       : null
 
