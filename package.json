@@ -42,6 +42,7 @@
     "prepublishOnly": "pnpm build"
   },
   "dependencies": {
+    "@inquirer/prompts": "^8.2.0",
     "@nktkas/hyperliquid": "^0.30.2",
     "better-sqlite3": "^12.6.2",
     "commander": "^12.1.0",

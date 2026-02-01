@@ -3,6 +3,48 @@ import { HttpTransport, InfoClient } from "@nktkas/hyperliquid"
 import type { Address, Hex } from "viem"
 
 /**
+ * Result of validating an API key
+ */
+export type ValidateApiKeyResult =
+  | { valid: true; masterAddress: Address; apiWalletAddress: Address }
+  | { valid: false; error: string }
+
+/**
+ * Validate an API private key by checking if it's registered as an agent wallet
+ * Returns the master address if valid, or an error message if not
+ */
+export async function validateApiKey(
+  apiPrivateKey: Hex,
+  isTestnet: boolean = false
+): Promise<ValidateApiKeyResult> {
+  const account = privateKeyToAccount(apiPrivateKey)
+  const apiWalletAddress = account.address
+
+  const transport = new HttpTransport({ isTestnet })
+  const client = new InfoClient({ transport })
+
+  try {
+    const response = (await client.userRole({ user: apiWalletAddress })) as UserRoleResponse
+
+    if (response.role === "agent") {
+      return {
+        valid: true,
+        masterAddress: response.data.user,
+        apiWalletAddress,
+      }
+    }
+
+    if (response.role === "missing") {
+      return { valid: false, error: "This key is not registered as an API wallet on Hyperliquid" }
+    }
+
+    return { valid: false, error: `Invalid role: ${response.role}. Expected an agent wallet.` }
+  } catch (err) {
+    return { valid: false, error: `Failed to validate API key: ${err instanceof Error ? err.message : String(err)}` }
+  }
+}
+
+/**
  * API wallet credentials
  */
 export interface ApiWalletCredentials {
