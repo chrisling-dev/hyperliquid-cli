@@ -22,7 +22,7 @@ export function createProgram(): Command {
   registerCommands(program)
   program.addHelpText(
     "after",
-    "\nStart here:\n  hl account add --help\n  hl info --help\n  hl ws --help\n  hl exchange --help\n  hl schema exchange order\n\nAPI commands return JSON; streams return NDJSON. No timing text is written to stdout.\nUse hl api audit to check official documentation for API drift.\n",
+    "\nStart here:\n  hl account add --help\n  hl info --help\n  hl ws --help\n  hl exchange --help\n  hl schema exchange order\n\nAPI commands return JSON; streams return NDJSON. No timing text is written to stdout.\n",
   )
   return program
 }

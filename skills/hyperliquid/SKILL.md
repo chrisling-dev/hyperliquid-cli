@@ -20,7 +20,6 @@ Use Node 22.12+. Start with `hl --help`, then `hl info --help`, `hl ws --help`, 
 - `info`/`exchange` write JSON to stdout; `ws` writes NDJSON. Diagnostics go to stderr. Check exit status; never blindly retry writes after network errors.
 - Streams share an automatically started `hl core`. Ctrl-C releases a subscription. Gaps can occur on reconnect; reconcile with info queries when needed.
 - `hl core status`, `hl core stop`, and `hl core cleanup` manage shared and legacy runtime state.
-- `hl api audit` checks live official docs against mappings and the bundled snapshot. Exit 2 means drift; 3 means parser coverage is inconclusive.
 - Friendly `order`, `asset`, `markets`, and portfolio commands are intentionally absent in this beta.
 
 Examples:

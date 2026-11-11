@@ -18,7 +18,7 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - run: pnpm build
       - name: Compare live docs with mappings and reviewed snapshot
-        run: node dist/index.js api audit --save upstream-docs.json > api-audit-report.json
+        run: npm run --silent api:audit -- --save upstream-docs.json > api-audit-report.json
       - uses: actions/upload-artifact@v4
         if: always()
         with:

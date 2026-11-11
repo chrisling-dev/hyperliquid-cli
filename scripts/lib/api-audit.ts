@@ -1,5 +1,5 @@
 import { createHash } from "node:crypto"
-import { methods, fields } from "./registry.js"
+import { methods, fields } from "../../src/api/registry.js"
 export const DOC_ROOT = "https://hyperliquid.gitbook.io/hyperliquid-docs"
 export interface Page {
   url: string

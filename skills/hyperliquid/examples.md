@@ -22,9 +22,6 @@ hl schema exchange order
 hl exchange updateLeverage --asset 0 --isCross true --leverage 5 --account trading --dry-run
 hl exchange order --input order.json --account trading --dry-run
 
-# Deterministic coverage/drift audit
-hl api audit --save upstream-docs.json
-hl api audit --snapshot upstream-docs.json
 ```
 
 Addresses and order IDs in examples are placeholders. Resolve API asset IDs from metadata; the v1 core intentionally does not interpret friendly symbols for exchange actions. Supply decimal prices/sizes as JSON strings. Remove `--dry-run` only when submission is intended.

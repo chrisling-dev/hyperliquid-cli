@@ -36,7 +36,6 @@ The registry generates all mapped commands, typed flags, nested schemas, and hel
 - `exchange <action>`: authenticated writes, returning JSON.
 - `account add|ls|remove|set-default`: local account management.
 - `core start|stop|status|cleanup`: shared stream lifecycle and legacy cleanup.
-- `api audit`: compare official documentation with installed mappings.
 - `upgrade`: check npm and show upgrade instructions.
 
 ## Accounts and permissions
@@ -120,20 +119,22 @@ Runtime files are `~/.hl/core-{mainnet,testnet}.{sock,pid,log}`. Socket permissi
 
 Before starting core, legacy `server.sock`, `server.pid`, and `server.json` files in `~/.hl` and `~/.hyperliquid` are detected. A responsive old server is shut down over its IPC protocol. A live PID is only signaled if its process command identifies the old Hyperliquid server. Unknown/live unrelated processes are left alone and reported. Stale runtime files are removed; accounts and old logs are retained. `hl core cleanup` runs this independently.
 
-## Deterministic documentation audit
+## Maintainer documentation audit
 
 ```sh
-hl api audit
-hl api audit --save upstream-docs.json
-hl api audit --snapshot upstream-docs.json
-hl api audit --snapshot upstream-docs.json --baseline api-docs-snapshot.json
+npm run api:audit
+npm run api:audit -- --save upstream-docs.json
+npm run api:audit -- --snapshot upstream-docs.json
+npm run api:audit -- --snapshot upstream-docs.json --baseline api-docs-snapshot.json
 ```
+
+Run this development command from a repository checkout after installing dependencies; it is not part of the installed `hl` CLI.
 
 The audit discovers API pages from the official `llms.txt`, fetches Markdown, and extracts request types without an LLM, including the separate HIP deployer pages. Signing, nonce, rate-limit, and other protocol pages are tracked by content hash. It reports:
 
 - Missing `info`, `ws`, and `exchange` commands.
 - Missing top-level info request fields and directly declared deployer variants.
-- Request-documentation changes against the reviewed snapshot shipped with this release, plus response/prose/protocol-page changes requiring review.
+- Request-documentation changes against the reviewed snapshot checked into this repository, plus response/prose/protocol-page changes requiring review.
 - Removed documentation entries and methods exposed by the SDK but not found in those docs.
 - Unparsed or missing pages/sections, which prevent a clean audit result.
 
@@ -161,7 +162,7 @@ pnpm lint
 pnpm test
 pnpm build
 pnpm api:manifest --check
-node dist/index.js api audit --snapshot api-docs-snapshot.json
+npm run api:audit -- --snapshot api-docs-snapshot.json
 # Optional live read/WebSocket test; never places trades:
 node --import tsx scripts/smoke.ts
 ```

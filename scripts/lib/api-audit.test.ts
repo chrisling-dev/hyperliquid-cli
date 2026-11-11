@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest"
 import { readFileSync } from "node:fs"
-import { audit, type Snapshot } from "./audit.js"
+import { audit, type Snapshot } from "./api-audit.js"
 const snapshot = JSON.parse(
   readFileSync(
     new URL("../../api-docs-snapshot.json", import.meta.url),
