@@ -26,10 +26,13 @@ hl ws --help
 hl exchange --help
 hl exchange order --help
 hl schema exchange order
+hl schema info l2Book --json
 hl capabilities --json
 ```
 
-The registry generates all mapped commands, typed flags, nested schemas, and help. API names and field casing follow Hyperliquid. The pinned SDK supplies most schemas and signing adapters; explicitly reviewed extensions cover documented SDK gaps. `api-manifest.json` records the installed surface for review.
+The registry generates all mapped commands, typed flags, nested schemas, and help. Required parameters are marked in help and rejected locally before any request or stream starts. They can be supplied through flags, JSON, or a file; a selected account can satisfy `user`.
+
+`hl schema <family> <method>` displays only accepted parameters, their required/optional status, allowed values, and nested fields. Add `--json` for a parameter-keyed JSON description. Internal SDK and request-envelope metadata remain in `hl capabilities --json`. API names and field casing follow Hyperliquid. The pinned SDK supplies most schemas and signing adapters; explicitly reviewed extensions cover documented SDK gaps. `api-manifest.json` records the installed surface for review.
 
 - `info <method>`: JSON reads, no daemon or signer required.
 - `ws <subscription>`: newline-delimited JSON events through the shared core.

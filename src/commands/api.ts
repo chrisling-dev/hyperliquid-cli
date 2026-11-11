@@ -7,8 +7,14 @@ import {
   getMethod,
   parseFlag,
   description,
-  unwrap,
+  requiredInputs,
+  assertRequiredInputs,
 } from "../api/registry.js"
+import {
+  inputSchema,
+  formatParameterHelp,
+  parameterType,
+} from "../api/parameter-help.js"
 import { resolveInput, execute, assertPermission } from "../api/execution.js"
 import { validateAddress } from "../lib/validation.js"
 import { getContext } from "../cli/program.js"
@@ -44,7 +50,7 @@ export function registerApi(program: Command) {
         cmd.addOption(
           new Option(
             `--${key} <value>`,
-            `${description(schema) || key} (${unwrap(schema).type})`,
+            `${description(schema) || key} (${parameterType(schema)}; ${requiredInputs(m).includes(key) ? (key === "user" ? "required unless an account is selected" : "required") : "optional or variant"})`,
           ).argParser((value) => parseFlag(value, schema)),
         )
       }
@@ -59,7 +65,7 @@ export function registerApi(program: Command) {
       }
       cmd.addHelpText(
         "after",
-        `\nInputs use API request fields${family === "exchange" ? " inside action (omit type, signature, and generated nonce)" : " (omit type)"}.\n--user defaults to the selected account where supported; explicit fields take precedence.\nUse JSON for arrays/objects. Example: --data '{"coin":"BTC"}' (where supported).\nFull nested schema: hl schema ${family} ${m.name}\n${family === "ws" ? "Core starts automatically; Ctrl-C releases this subscription.\n" : ""}`,
+        `\nInputs use API request fields${family === "exchange" ? " inside action (omit type, signature, and generated nonce)" : " (omit type)"}.\n--user defaults to the selected account where supported; explicit fields take precedence.\nUse JSON for arrays/objects. Example: --data '{"coin":"BTC"}' (where supported).\nParameter guide: hl schema ${family} ${m.name}\n${family === "ws" ? "Core starts automatically; Ctrl-C releases this subscription.\n" : ""}`,
       )
       cmd.action(async function (this: Command) {
         const opts = this.opts()
@@ -84,9 +90,10 @@ export function registerApi(program: Command) {
             params[key] = opts[key]
           }
         }
+        assertRequiredInputs(m, params, true)
         const config = getContext(this).config
-        assertPermission(m, config)
         params = resolveInput(m, params, config)
+        assertPermission(m, config)
         const execution = {
           vaultAddress: opts.executionVault
             ? validateAddress(opts.executionVault)
@@ -136,10 +143,17 @@ export function registerApi(program: Command) {
   }
   program
     .command("schema <family> <method>")
-    .description("Inspect a mapped command’s complete nested request schema")
-    .action((family, name) =>
-      console.log(JSON.stringify(manifest(getMethod(family, name)), null, 2)),
+    .description(
+      "Show accepted parameters, required fields, and allowed values",
     )
+    .action(function (this: Command, family: string, name: string) {
+      const method = getMethod(family, name)
+      console.log(
+        this.optsWithGlobals().json
+          ? JSON.stringify(inputSchema(method), null, 2)
+          : formatParameterHelp(method),
+      )
+    })
   program
     .command("capabilities")
     .description(

@@ -266,6 +266,7 @@ export function validateInput(
   m: Method,
   input: Record<string, unknown>,
 ): Record<string, unknown> {
+  assertRequiredInputs(m, input)
   const allowed = inputFields(m)
   for (const key of Object.keys(input))
     if (!(key in allowed))
@@ -305,4 +306,45 @@ export function validateInput(
   return Object.fromEntries(
     Object.entries(result).filter(([k]) => !systemFields(m).has(k)),
   )
+}
+
+export function isOptional(schema: Schema): boolean {
+  return ["optional", "nullish", "undefinedable", "exact_optional"].includes(
+    schema.type,
+  )
+}
+function commonRequired(schema: Schema): string[] {
+  const base = unwrap(schema)
+  if (base.entries)
+    return Object.entries(base.entries)
+      .filter(([, s]) => !isOptional(s))
+      .map(([name]) => name)
+  const alternatives = (base.options ?? [])
+    .filter((s): s is Schema => typeof s === "object")
+    .map(commonRequired)
+  return alternatives.length
+    ? alternatives[0].filter((name) =>
+        alternatives.every((keys) => keys.includes(name)),
+      )
+    : []
+}
+export function requiredInputs(method: Method): string[] {
+  if (method.sdkName === "noop") return ["nonce"]
+  return commonRequired(method.payload).filter(
+    (name) => name in inputFields(method),
+  )
+}
+export function assertRequiredInputs(
+  method: Method,
+  input: Record<string, unknown>,
+  allowAccountUser = false,
+): void {
+  const missing = requiredInputs(method).filter(
+    (name) =>
+      input[name] === undefined && !(allowAccountUser && name === "user"),
+  )
+  if (missing.length)
+    throw new Error(
+      `Missing required parameter${missing.length > 1 ? "s" : ""}: ${missing.map((name) => `--${name}`).join(", ")}. Supply ${missing.length > 1 ? "them" : "it"} as flags or in --data/--input${missing.includes("user") ? ", or select an account for --user" : ""}. Run hl ${method.family} ${method.name} --help.`,
+    )
 }
