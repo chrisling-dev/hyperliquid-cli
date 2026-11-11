@@ -21,6 +21,18 @@ const trailingStop = v.object({
 })
 const cDeposit2 = v.object({ type: v.literal("cDeposit2"), wei: uint })
 export const extensions = [
+  ...(["info", "ws"] as const).map((family) => ({
+    family,
+    name: "allMids",
+    permission: "public" as const,
+    description: "Mid prices across all DEXs by default. Use --dex '' for native markets or --dex xyz for one venue.",
+    schema: v.object({
+      type: v.literal("allMids"),
+      dex: v.optional(v.pipe(v.string(), v.description(
+        "DEX name. CLI default: ALL_DEXS (all venues); empty string selects native markets.",
+      )), "ALL_DEXS"),
+    }),
+  })),
   {
     family: "ws",
     name: "l2",

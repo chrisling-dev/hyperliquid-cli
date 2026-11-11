@@ -64,41 +64,10 @@
     },
     {
       "family": "info",
-      "name": "allMids",
-      "sdkName": "allMids",
-      "permission": "public",
-      "description": "info allMids",
-      "vault": false,
-      "expires": false,
-      "userSigned": false,
-      "parameters": {
-        "dex": {
-          "type": "string",
-          "optional": true
-        }
-      },
-      "request": {
-        "type": "object",
-        "optional": false,
-        "properties": {
-          "type": {
-            "type": "literal",
-            "optional": false,
-            "const": "allMids"
-          },
-          "dex": {
-            "type": "string",
-            "optional": true
-          }
-        }
-      }
-    },
-    {
-      "family": "info",
       "name": "allPerpMetas",
       "sdkName": "allPerpMetas",
       "permission": "public",
-      "description": "info allPerpMetas",
+      "description": "Retrieve perpetual metadata across all DEXs in one request; includes HIP-3 venues.",
       "vault": false,
       "expires": false,
       "userSigned": false,
@@ -1091,7 +1060,7 @@
       "name": "meta",
       "sdkName": "meta",
       "permission": "public",
-      "description": "info meta",
+      "description": "info meta Single DEX only. For all venues use info allPerpMetas and ws allDexsAssetCtxs; ALL_DEXS is not supported here.",
       "vault": false,
       "expires": false,
       "userSigned": false,
@@ -1122,7 +1091,7 @@
       "name": "metaAndAssetCtxs",
       "sdkName": "metaAndAssetCtxs",
       "permission": "public",
-      "description": "info metaAndAssetCtxs",
+      "description": "info metaAndAssetCtxs Single DEX only. For all venues use info allPerpMetas and ws allDexsAssetCtxs; ALL_DEXS is not supported here.",
       "vault": false,
       "expires": false,
       "userSigned": false,
@@ -2981,7 +2950,7 @@
       "name": "allDexsAssetCtxs",
       "sdkName": "allDexsAssetCtxs",
       "permission": "public",
-      "description": "ws allDexsAssetCtxs",
+      "description": "Stream asset contexts across all perpetual DEXs in one subscription; grouped by DEX.",
       "vault": false,
       "expires": false,
       "userSigned": false,
@@ -3025,37 +2994,6 @@
           "user": {
             "type": "string",
             "optional": false
-          }
-        }
-      }
-    },
-    {
-      "family": "ws",
-      "name": "allMids",
-      "sdkName": "allMids",
-      "permission": "public",
-      "description": "ws allMids",
-      "vault": false,
-      "expires": false,
-      "userSigned": false,
-      "parameters": {
-        "dex": {
-          "type": "string",
-          "optional": true
-        }
-      },
-      "request": {
-        "type": "object",
-        "optional": false,
-        "properties": {
-          "type": {
-            "type": "literal",
-            "optional": false,
-            "const": "allMids"
-          },
-          "dex": {
-            "type": "string",
-            "optional": true
           }
         }
       }
@@ -12363,6 +12301,76 @@
                 ]
               }
             }
+          }
+        }
+      }
+    },
+    {
+      "family": "info",
+      "name": "allMids",
+      "sdkName": "allMids",
+      "permission": "public",
+      "description": "Mid prices across all DEXs by default. Use --dex '' for native markets or --dex xyz for one venue.",
+      "vault": false,
+      "expires": false,
+      "userSigned": false,
+      "parameters": {
+        "dex": {
+          "type": "string",
+          "optional": true,
+          "description": "DEX name. CLI default: ALL_DEXS (all venues); empty string selects native markets.",
+          "default": "ALL_DEXS"
+        }
+      },
+      "request": {
+        "type": "object",
+        "optional": false,
+        "properties": {
+          "type": {
+            "type": "literal",
+            "optional": false,
+            "const": "allMids"
+          },
+          "dex": {
+            "type": "string",
+            "optional": true,
+            "description": "DEX name. CLI default: ALL_DEXS (all venues); empty string selects native markets.",
+            "default": "ALL_DEXS"
+          }
+        }
+      }
+    },
+    {
+      "family": "ws",
+      "name": "allMids",
+      "sdkName": "allMids",
+      "permission": "public",
+      "description": "Mid prices across all DEXs by default. Use --dex '' for native markets or --dex xyz for one venue.",
+      "vault": false,
+      "expires": false,
+      "userSigned": false,
+      "parameters": {
+        "dex": {
+          "type": "string",
+          "optional": true,
+          "description": "DEX name. CLI default: ALL_DEXS (all venues); empty string selects native markets.",
+          "default": "ALL_DEXS"
+        }
+      },
+      "request": {
+        "type": "object",
+        "optional": false,
+        "properties": {
+          "type": {
+            "type": "literal",
+            "optional": false,
+            "const": "allMids"
+          },
+          "dex": {
+            "type": "string",
+            "optional": true,
+            "description": "DEX name. CLI default: ALL_DEXS (all venues); empty string selects native markets.",
+            "default": "ALL_DEXS"
           }
         }
       }

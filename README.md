@@ -187,3 +187,24 @@ include order counts. Reconnects clear the book and wait for a fresh snapshot.
 This extension is unverified by the official-docs audit and may change upstream.
 After updating a running checkout, use `hl core stop` before starting a new stream
 so core loads the new implementation.
+
+### Query all perpetual venues without per-DEX loops
+
+```sh
+hl info allPerpMetas        # All DEX metadata in one HTTP request
+hl ws allDexsAssetCtxs      # All DEX asset contexts in one shared subscription
+hl info allMids             # All venue mid prices; defaults to dex=ALL_DEXS
+hl ws allMids               # Same default for streaming mid prices
+hl info allMids --dex ''    # Native markets only
+hl info allMids --dex xyz   # One HIP-3 venue
+```
+
+The sentinel is **`ALL_DEXS`**, not `ALL_DEX` or `ALL_DEXES`. The CLI applies
+this default to `info allMids` and `ws allMids`; explicit flags/JSON override it.
+It is not a universal DEX selector: `meta` and `metaAndAssetCtxs` remain
+single-DEX APIs and reject this value upstream. Use `allPerpMetas` for bulk
+metadata and `allDexsAssetCtxs` for bulk contexts. For joins, metadata arrays
+follow `perpDexs` order (the first/native entry is null); context updates contain
+`ctxs: [[dexName, contexts], ...]`, with `""` for the native DEX. Within each DEX,
+contexts follow that metadata's `universe` order. Match by DEX and index, not
+by flattening arrays from different venues.

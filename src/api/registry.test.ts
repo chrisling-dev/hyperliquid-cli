@@ -157,3 +157,14 @@ it("rejects mutually exclusive variants instead of silently discarding fields", 
     }),
   ).toThrow()
 })
+
+it("defaults mid prices to all DEXs while preserving explicit venue selection", () => {
+  for (const family of ["info", "ws"]) {
+    const method = getMethod(family, "allMids")
+    expect(validateInput(method, {})).toEqual({ dex: "ALL_DEXS" })
+    expect(validateInput(method, { dex: "" })).toEqual({ dex: "" })
+    expect(validateInput(method, { dex: "xyz" })).toEqual({ dex: "xyz" })
+    expect(manifest(method).parameters.dex).toHaveProperty("default", "ALL_DEXS")
+  }
+  expect(validateInput(getMethod("info", "metaAndAssetCtxs"), {})).toEqual({})
+})

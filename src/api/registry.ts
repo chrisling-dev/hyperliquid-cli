@@ -138,6 +138,14 @@ for (const extension of [...extensions, ...deployerExtensions]) {
     userSigned: false,
   })
 }
+for (const method of methods) {
+  if (method.family === "info" && method.name === "allPerpMetas")
+    method.description = "Retrieve perpetual metadata across all DEXs in one request; includes HIP-3 venues."
+  if (method.family === "ws" && method.name === "allDexsAssetCtxs")
+    method.description = "Stream asset contexts across all perpetual DEXs in one subscription; grouped by DEX."
+  if (method.family === "info" && ["meta", "metaAndAssetCtxs"].includes(method.name))
+    method.description += " Single DEX only. For all venues use info allPerpMetas and ws allDexsAssetCtxs; ALL_DEXS is not supported here."
+}
 export function getMethod(family: string, name: string): Method {
   const method = methods.find((m) => m.family === family && m.name === name)
   if (!method)
