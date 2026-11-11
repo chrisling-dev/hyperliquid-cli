@@ -20,7 +20,7 @@ const log = (error: unknown) =>
     mode: 0o600,
   })
 const transport = new WebSocketTransport({ isTestnet: testnet })
-const broker = new Broker(sdkSubscribe(transport))
+const broker = new Broker(sdkSubscribe(transport, testnet))
 const sockets = new Set<Socket>()
 const startedAt = Date.now()
 let bound = false

@@ -22,6 +22,19 @@ const trailingStop = v.object({
 const cDeposit2 = v.object({ type: v.literal("cDeposit2"), wei: uint })
 export const extensions = [
   {
+    family: "ws",
+    name: "l2",
+    permission: "public",
+    description: "Undocumented compressed order book; emits reconstructed snapshots. Isolated by coin and aggregation.",
+    schema: v.pipe(v.object({
+      type: v.literal("l2"),
+      coin: v.pipe(v.string(), v.minLength(1)),
+      nSigFigs: v.optional(v.nullable(v.picklist([2, 3, 4, 5]))),
+      mantissa: v.optional(v.nullable(v.picklist([2, 5]))),
+    }), v.check((p) => p.mantissa == null || p.nSigFigs === 5,
+      "mantissa requires nSigFigs=5")),
+  },
+  {
     family: "info",
     name: "outcomeDeployerLimits",
     permission: "public",

@@ -116,7 +116,7 @@ hl --testnet core start
 hl core cleanup
 ```
 
-Streaming commands start core automatically. Mainnet and testnet use separate sockets/processes. Core owns one reconnecting upstream WebSocket per network and reference-counts matching subscriptions. Disconnecting the final local consumer unsubscribes upstream. Slow local clients are disconnected when their pending IPC output exceeds the buffer limit.
+Streaming commands start core automatically. Mainnet and testnet use separate sockets/processes. Core shares a reconnecting upstream WebSocket per network for SDK feeds and reference-counts matching subscriptions. The undocumented `l2` feed uses a separate reconnecting connection per unique coin/nSigFigs/mantissa tuple because its messages do not identify aggregation settings. Identical `l2` requests share that connection across clients. Disconnecting the final local consumer unsubscribes upstream. Slow local clients are disconnected when their pending IPC output exceeds the buffer limit.
 
 The SDK handles heartbeat/reconnect/resubscribe. Connection notices go to stderr; event data goes to stdout. Reconnects can have event gaps: this is a live feed, not a durable event log. If core itself exits, the command fails so its caller can explicitly restart it.
 
@@ -173,3 +173,17 @@ node --import tsx scripts/smoke.ts
 ```
 
 Unit tests cover registry generation, account capabilities, signing payloads with mocked transport, docs drift, database migration, nonce allocation, subscription sharing, and legacy cleanup. Live write acceptance still requires controlled testnet verification.
+
+### Undocumented order-book feed
+
+```sh
+hl ws l2 --coin BTC
+hl ws l2 --coin BTC --nSigFigs 5 --mantissa 2
+```
+
+`l2` emits reconstructed full books from a snapshot followed by compressed deltas.
+`mantissa` requires `nSigFigs=5`. Updated levels have `n: null` because deltas do not
+include order counts. Reconnects clear the book and wait for a fresh snapshot.
+This extension is unverified by the official-docs audit and may change upstream.
+After updating a running checkout, use `hl core stop` before starting a new stream
+so core loads the new implementation.

@@ -12368,6 +12368,73 @@
       }
     },
     {
+      "family": "ws",
+      "name": "l2",
+      "sdkName": "l2",
+      "permission": "public",
+      "description": "Undocumented compressed order book; emits reconstructed snapshots. Isolated by coin and aggregation.",
+      "vault": false,
+      "expires": false,
+      "userSigned": false,
+      "parameters": {
+        "coin": {
+          "type": "string",
+          "optional": false
+        },
+        "nSigFigs": {
+          "type": "picklist",
+          "optional": true,
+          "options": [
+            2,
+            3,
+            4,
+            5
+          ]
+        },
+        "mantissa": {
+          "type": "picklist",
+          "optional": true,
+          "options": [
+            2,
+            5
+          ]
+        }
+      },
+      "request": {
+        "type": "object",
+        "optional": false,
+        "properties": {
+          "type": {
+            "type": "literal",
+            "optional": false,
+            "const": "l2"
+          },
+          "coin": {
+            "type": "string",
+            "optional": false
+          },
+          "nSigFigs": {
+            "type": "picklist",
+            "optional": true,
+            "options": [
+              2,
+              3,
+              4,
+              5
+            ]
+          },
+          "mantissa": {
+            "type": "picklist",
+            "optional": true,
+            "options": [
+              2,
+              5
+            ]
+          }
+        }
+      }
+    },
+    {
       "family": "info",
       "name": "outcomeDeployerLimits",
       "sdkName": "outcomeDeployerLimits",

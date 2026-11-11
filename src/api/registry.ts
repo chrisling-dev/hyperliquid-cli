@@ -304,6 +304,10 @@ export function validateInput(
         .join("; "),
     )
   const result = parsed.output as Record<string, unknown>
+  if (m.name === "l2" && m.family === "ws") {
+    if (result.nSigFigs == null) delete result.nSigFigs
+    if (result.mantissa == null) delete result.mantissa
+  }
   return Object.fromEntries(
     Object.entries(result).filter(([k]) => !systemFields(m).has(k)),
   )

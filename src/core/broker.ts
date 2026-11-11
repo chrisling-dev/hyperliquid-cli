@@ -1,3 +1,4 @@
+import { subscribeL2 } from "./l2.js"
 import {
   getMethod,
   validateInput,
@@ -69,8 +70,9 @@ export class Broker {
     }
   }
 }
-export function sdkSubscribe(transport: unknown): Subscribe {
+export function sdkSubscribe(transport: unknown, isTestnet = false): Subscribe {
   return (name, params, listener) => {
+    if (name === "l2") return subscribeL2(params, listener, isTestnet)
     const fn = modules.ws[name] as (
       config: unknown,
       params: unknown,
