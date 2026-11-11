@@ -1,3 +1,4 @@
+import { CLIError } from "../cli/errors.js"
 import * as info from "@nktkas/hyperliquid/api/info"
 import * as exchange from "@nktkas/hyperliquid/api/exchange"
 import * as subscriptions from "@nktkas/hyperliquid/api/subscription"
@@ -344,7 +345,9 @@ export function assertRequiredInputs(
       input[name] === undefined && !(allowAccountUser && name === "user"),
   )
   if (missing.length)
-    throw new Error(
-      `Missing required parameter${missing.length > 1 ? "s" : ""}: ${missing.map((name) => `--${name}`).join(", ")}. Supply ${missing.length > 1 ? "them" : "it"} as flags or in --data/--input${missing.includes("user") ? ", or select an account for --user" : ""}. Run hl ${method.family} ${method.name} --help.`,
+    throw new CLIError(
+      `Missing required parameter${missing.length > 1 ? "s" : ""}: ${missing.map((name) => `--${name}`).join(", ")}`,
+      `Supply ${missing.length > 1 ? "them" : "it"} as ${missing.length > 1 ? "flags" : "a flag"}, or in --data / --input.${missing.includes("user") ? " You can also select an account for --user." : ""}`,
+      `hl ${method.family} ${method.name} --help`,
     )
 }

@@ -67,6 +67,8 @@ Permissions are per action, not inferred from its signing scheme. Some explicitl
 
 Account keys remain stored **unencrypted** in `~/.hl/hl.db`, with file mode `0600`. The directory is created with `0700`. `HL_HOME` overrides the data directory. The first v1 database migration creates `hl.db.pre-v1` and retains existing accounts.
 
+Errors are readable text on stderr by default, with a red label and cyan hint in terminals. Use `--json` for structured errors. Redirected output and `NO_COLOR` disable colors.
+
 ## Reads and streams
 
 ```sh

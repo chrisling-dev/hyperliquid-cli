@@ -1,3 +1,4 @@
+import { formatError } from "./errors.js"
 import { Command } from "commander"
 import { createRequire } from "node:module"
 import { loadConfig } from "../lib/config.js"
@@ -13,12 +14,24 @@ export function createProgram(): Command {
       "Hyperliquid API CLI — account-aware JSON commands and shared streams",
     )
     .version(pkg.version)
-    .option("--json", "JSON output for account and utility commands", false)
+    .option(
+      "--json",
+      "JSON output for errors, account and utility commands",
+      false,
+    )
     .option("--testnet", "Use testnet", false)
     .option(
       "--account <alias>",
       "Select a saved account (otherwise the default)",
     )
+  program.configureOutput({
+    outputError: (message, write) =>
+      write(
+        formatError(new Error(message.replace(/^error: /, "").trimEnd()), {
+          json: !!program.opts().json,
+        }),
+      ),
+  })
   registerCommands(program)
   program.addHelpText(
     "after",
