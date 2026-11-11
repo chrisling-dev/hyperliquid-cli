@@ -21,6 +21,7 @@ export function registerRemoveCommand(account: Command): void {
         }
 
         // Confirm deletion unless --force is used
+        if (!options.force && !process.stdin.isTTY) throw new Error("Use --force to remove an account non-interactively")
         if (!options.force) {
           const confirmed = await confirm(
             `Are you sure you want to remove account "${alias}" (${existingAccount.userAddress})?`,

@@ -1,0 +1,28 @@
+name: Hyperliquid API drift
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '19 6 * * *'
+permissions:
+  contents: read
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm build
+      - name: Compare live docs with mappings and reviewed snapshot
+        run: node dist/index.js api audit --save upstream-docs.json > api-audit-report.json
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: hyperliquid-api-audit
+          path: |
+            api-audit-report.json
+            upstream-docs.json

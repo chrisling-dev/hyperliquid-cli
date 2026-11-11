@@ -1,6 +1,6 @@
 {
   "name": "hyperliquid-cli",
-  "version": "0.0.5",
+  "version": "1.0.0-beta.1",
   "description": "CLI tool for Hyperliquid DEX",
   "author": "Chris Ling",
   "license": "MIT",
@@ -23,15 +23,17 @@
   "type": "module",
   "bin": {
     "hl": "./dist/index.js",
-    "hl-server": "./dist/server/index.js"
+    "hl-core": "./dist/core/index.js"
   },
   "files": [
     "dist",
     "README.md",
-    "SKILLS.md"
+    "SKILLS.md",
+    "api-docs-snapshot.json",
+    "api-manifest.json"
   ],
   "scripts": {
-    "build": "tsc",
+    "build": "rm -rf dist && tsc",
     "dev": "tsx src/index.ts",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
@@ -39,25 +41,22 @@
     "test:coverage": "vitest run --coverage",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
-    "prepublishOnly": "pnpm build"
+    "prepublishOnly": "pnpm build",
+    "api:manifest": "tsx scripts/api-manifest.ts",
+    "api:audit": "tsx src/index.ts api audit"
   },
   "dependencies": {
     "@inquirer/prompts": "^8.2.0",
-    "@nktkas/hyperliquid": "^0.30.2",
+    "@nktkas/hyperliquid": "0.33.3",
     "better-sqlite3": "^12.6.2",
     "commander": "^12.1.0",
-    "ink": "^5.0.1",
-    "ink-spinner": "^5.0.0",
-    "react": "^18.3.1",
-    "viem": "^2.21.0",
-    "ws": "^8.19.0"
+    "valibot": "1.5.0",
+    "viem": "^2.21.0"
   },
   "devDependencies": {
     "@eslint/js": "^9.39.2",
     "@types/better-sqlite3": "^7.6.13",
     "@types/node": "^22.0.0",
-    "@types/react": "^18.3.3",
-    "@types/ws": "^8.18.1",
     "eslint": "^9.39.2",
     "globals": "^17.2.0",
     "tsx": "^4.19.0",
@@ -66,7 +65,10 @@
     "vitest": "^4.0.18"
   },
   "engines": {
-    "node": ">=18"
+    "node": ">=22.12.0"
   },
-  "packageManager": "pnpm@9.15.0+sha512.76e2379760a4328ec4415815bcd6628dee727af3779aaa4c914e3944156c4299921a89f976381ee107d41f12cfa4b66681ca9c718f0668fa0831ed4c6d8ba56c"
+  "packageManager": "pnpm@9.15.0+sha512.76e2379760a4328ec4415815bcd6628dee727af3779aaa4c914e3944156c4299921a89f976381ee107d41f12cfa4b66681ca9c718f0668fa0831ed4c6d8ba56c",
+  "publishConfig": {
+    "tag": "beta"
+  }
 }

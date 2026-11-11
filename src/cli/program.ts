@@ -1,70 +1,35 @@
 import { Command } from "commander"
-import { createRequire } from "module"
+import { createRequire } from "node:module"
 import { loadConfig } from "../lib/config.js"
 import { createContext, type CLIContext } from "./context.js"
 import { registerCommands } from "../commands/index.js"
-
-const require = createRequire(import.meta.url)
-const pkg = require("../../package.json") as { version: string }
-
-export interface GlobalOptions {
-  json: boolean
-  testnet: boolean
+const pkg = createRequire(import.meta.url)("../../package.json") as {
+  version: string
 }
-
 export function createProgram(): Command {
   const program = new Command()
-
-  program
     .name("hl")
-    .description("CLI for Hyperliquid DEX")
+    .description(
+      "Hyperliquid API CLI — account-aware JSON commands and shared streams",
+    )
     .version(pkg.version)
-    .option("--json", "Output in JSON format", false)
-    .option("--testnet", "Use testnet instead of mainnet", false)
-    .hook("preAction", async (thisCommand) => {
-      const opts = thisCommand.opts() as GlobalOptions
-      const config = loadConfig(opts.testnet)
-      const context = createContext(config)
-
-      // Store context on the command for subcommands to access
-      thisCommand.setOptionValue("_context", context)
-      thisCommand.setOptionValue("_outputOptions", { json: opts.json })
-
-      // Store start time for timing
-      thisCommand.setOptionValue("_startTime", performance.now())
-    })
-    .hook("postAction", (thisCommand) => {
-      const opts = thisCommand.opts() as GlobalOptions
-      const startTime = thisCommand.opts()._startTime as number | undefined
-
-      // Only show timing for non-JSON output
-      if (!opts.json && startTime !== undefined) {
-        const duration = (performance.now() - startTime) / 1000
-        console.log(`\nCompleted in ${duration.toFixed(2)}s`)
-      }
-    })
-
+    .option("--json", "JSON output for account and utility commands", false)
+    .option("--testnet", "Use testnet", false)
+    .option(
+      "--account <alias>",
+      "Select a saved account (otherwise the default)",
+    )
   registerCommands(program)
-
+  program.addHelpText(
+    "after",
+    "\nStart here:\n  hl account add --help\n  hl info --help\n  hl ws --help\n  hl exchange --help\n  hl schema exchange order\n\nAPI commands return JSON; streams return NDJSON. No timing text is written to stdout.\nUse hl api audit to check official documentation for API drift.\n",
+  )
   return program
 }
-
 export function getContext(command: Command): CLIContext {
-  let current: Command | null = command
-  while (current) {
-    const ctx = current.opts()._context as CLIContext | undefined
-    if (ctx) return ctx
-    current = current.parent
-  }
-  throw new Error("Context not found")
+  const opts = command.optsWithGlobals()
+  return createContext(loadConfig(!!opts.testnet, opts.account))
 }
-
 export function getOutputOptions(command: Command): { json: boolean } {
-  let current: Command | null = command
-  while (current) {
-    const opts = current.opts()._outputOptions as { json: boolean } | undefined
-    if (opts) return opts
-    current = current.parent
-  }
-  return { json: false }
+  return { json: !!command.optsWithGlobals().json }
 }
