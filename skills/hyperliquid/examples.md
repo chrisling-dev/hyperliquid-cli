@@ -2,7 +2,10 @@
 
 ```sh
 # Public data, no account needed
-hl info meta
+hl info allPerpMetas
+hl info allMids
+hl info allMids --dex xyz
+hl info meta --dex xyz
 hl info spotMeta
 hl info l2Book --coin BTC
 
@@ -13,6 +16,8 @@ hl info spotClearinghouseState --account watch
 hl info openOrders --account watch
 
 # Live streams share core automatically
+hl ws allDexsAssetCtxs
+hl ws l2 --coin BTC --nSigFigs 5 --mantissa 2
 hl ws l2Book --coin BTC
 hl ws userFills --account watch
 hl core status

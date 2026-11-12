@@ -147,6 +147,21 @@ Exit codes: **0** coverage checks pass, **2** missing mappings or review-require
 
 The scheduled GitHub workflow saves the report and upstream snapshot as artifacts and fails when attention is needed. It does not silently update signing behavior or publish releases.
 
+The schedule is daily at 06:19 UTC (14:19 Malaysia time). GitHub runs cron only
+from the default branch: while this workflow exists only on `v1`, it is not
+scheduled. To enable it before the stable merge, land a separate audit workflow
+on `main` that explicitly checks out `v1`; otherwise it becomes active after v1
+lands on `main`. Local `npm run api:audit` remains available meanwhile.
+
+Alerts currently use GitHub Actions failure notifications; no issue, Slack, or
+email integration is configured by this repository. Enable GitHub/email under
+GitHub Settings → Notifications → Actions and select failed workflows only.
+Scheduled notifications go to the workflow's associated actor (typically its
+creator or the person who last changed the cron), not automatically everyone.
+See [GitHub Actions notifications](https://docs.github.com/en/actions/concepts/workflows-and-actions/notifications-for-workflow-runs).
+Exit 2 means drift/review required, exit 3 means inconclusive coverage, and exit
+1 means the audit could not run; inspect the report/logs to distinguish them.
+
 Maintainer update sequence:
 
 1. Run the audit and inspect upstream changes.

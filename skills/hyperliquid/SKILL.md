@@ -20,14 +20,25 @@ Use Node 22.12+. Start with `hl --help`, then `hl info --help`, `hl ws --help`, 
 - `info`/`exchange` write JSON to stdout; `ws` writes NDJSON. Diagnostics go to stderr. Check exit status; never blindly retry writes after network errors.
 - Streams share an automatically started `hl core`. Ctrl-C releases a subscription. Gaps can occur on reconnect; reconcile with info queries when needed.
 - `hl core status`, `hl core stop`, and `hl core cleanup` manage shared and legacy runtime state.
+- `info allMids` and `ws allMids` default to `dex=ALL_DEXS`. Use `--dex ''` for native markets or `--dex xyz` for one venue. The sentinel is not supported by every method.
+- For all perpetual venues, use `info allPerpMetas` (one metadata request) and `ws allDexsAssetCtxs` (one context subscription), rather than calling `metaAndAssetCtxs` per venue. `meta` and `metaAndAssetCtxs` remain single-DEX methods.
+- `ws l2 --coin BTC` is an undocumented compressed feed decoded into full books. Identical coin/nSigFigs/mantissa inputs share a subscription; different inputs use isolated connections. `mantissa` requires `nSigFigs=5`; updated levels have `n: null` because counts are not provided. The book resets after reconnect and waits for a snapshot. Error events can appear in the stream; do not treat them as books. `l2Book --fast true` is a separate API.
+- CLI errors are readable text by default; use global `--json` for structured CLI errors. Missing required inputs fail locally. Schema guides describe parameters, not transport envelopes.
+- Documentation drift auditing is repository tooling (`npm run api:audit`), not an installed `hl` command. It checks coverage and docs changes, not complete semantic correctness of undocumented feeds.
 - Friendly `order`, `asset`, `markets`, and portfolio commands are intentionally absent in this beta.
 
 Examples:
 
 ```sh
 hl info allMids
+hl info allPerpMetas
+hl ws allDexsAssetCtxs
+hl ws l2 --coin BTC --nSigFigs 5 --mantissa 2
 hl info clearinghouseState --user 0xADDRESS
 hl --testnet ws l2Book --coin BTC
 hl exchange updateLeverage --asset 0 --isCross true --leverage 5 --account trading --dry-run
 hl schema exchange order
 ```
+
+See [reference.md](reference.md) for discovery and cross-DEX joins, and
+[examples.md](examples.md) for account, stream, and write-validation examples.
