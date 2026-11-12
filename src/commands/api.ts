@@ -160,16 +160,29 @@ export function registerApi(program: Command) {
     })
   program
     .command("capabilities")
-    .description(
-      "List all mapped methods, schemas, and required account capabilities as JSON",
-    )
-    .action(() =>
-      console.log(
-        JSON.stringify(
-          { sdk: "0.33.3", methods: methods.map(manifest) },
-          null,
-          2,
-        ),
-      ),
-    )
+    .description("List mapped method names by family; --json includes full schemas")
+    .action(function (this: Command) {
+      if (this.optsWithGlobals().json) {
+        console.log(JSON.stringify({ sdk: "0.33.3", methods: methods.map(manifest) }, null, 2))
+        return
+      }
+      const width = Math.max(40, Math.min(process.stdout.columns || 88, 100))
+      const groups = ["info", "ws", "exchange"].map((family) => {
+        const names = methods.filter((m) => m.family === family)
+          .map((m) => m.name).sort((a, b) => a.localeCompare(b))
+        const lines = [`${family} (${names.length})`]
+        let line = "  "
+        for (const name of names) {
+          if (line.length > 2 && line.length + name.length + 2 > width) {
+            lines.push(line)
+            line = "  "
+          }
+          line += `${line.length > 2 ? "  " : ""}${name}`
+        }
+        if (line.length > 2) lines.push(line)
+        return lines.join("\n")
+      })
+      console.log(groups.join("\n\n") +
+        "\n\nParameters: hl schema <family> <method>\nFull manifest: hl capabilities --json")
+    })
 }

@@ -266,3 +266,7 @@ Boolean API flags accept an optional value: `hl ws l2Book --coin BTC --fast`
 is equivalent to `--fast true`. Use `--fast false` for an explicit false value.
 Omitting a flag preserves the API default or required-field validation; JSON
 inputs continue to use JSON booleans.
+
+`hl capabilities` lists method names grouped by `info`, `ws`, and `exchange`.
+Use `hl capabilities --json` for the full manifest, or `hl schema <family> <method>`
+for the parameters of one method.

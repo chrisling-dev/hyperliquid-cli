@@ -2,7 +2,7 @@
 
 Use Node 22.12+. Start with `hl --help`, then `hl info --help`, `hl ws --help`, and `hl exchange --help`.
 
-- Inspect nested inputs with `hl schema <family> <method>`; inspect all mappings with `hl capabilities --json`.
+- Inspect nested inputs with `hl schema <family> <method>`; list method names by family with `hl capabilities`. Use `hl capabilities --json` only when full schemas and permission metadata are needed.
 - Public reads need no account. User reads accept `--user <address>` or default to the selected account's owner.
 - Select a saved account with `--account <alias>`; list accounts using `hl account ls --json`.
 - Import read-only addresses with `hl account add --alias <name> --user <address>`.

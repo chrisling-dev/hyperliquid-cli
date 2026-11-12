@@ -22,3 +22,7 @@ Filter delisted assets and invalid/zero `prevDayPx` values when ranking gainers;
 24-hour mark-price change is `(markPx / prevDayPx - 1) * 100`. A market's
 `maxLeverage` is a ceiling, not the account's selected leverage or a guarantee
 for every position size.
+
+`hl capabilities` lists method names grouped by `info`, `ws`, and `exchange`.
+Use `hl capabilities --json` for the full manifest, or `hl schema <family> <method>`
+for the parameters of one method.
