@@ -16,3 +16,4 @@ jobs:
       - run: pnpm typecheck && pnpm lint && pnpm test && pnpm build
       - run: pnpm api:manifest --check
       - run: npm run --silent api:audit -- --snapshot api-docs-snapshot.json
+      - run: pnpm package:check

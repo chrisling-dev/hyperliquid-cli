@@ -1,0 +1,46 @@
+name: Release to npm
+on:
+  release:
+    types: [published]
+permissions:
+  contents: read
+concurrency:
+  group: npm-release
+  cancel-in-progress: false
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.release.tag_name }}
+          fetch-depth: 0
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - name: Use npm with trusted publishing support
+        run: npm install --global npm@11
+      - name: Validate version, release channel, and branch ancestry
+        id: release
+        run: node scripts/release-check.mjs
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm typecheck && pnpm lint && pnpm test && pnpm build
+      - run: pnpm api:manifest --check
+      - run: npm run --silent api:audit -- --snapshot api-docs-snapshot.json
+      - name: Pack and test the installed artifact
+        id: package
+        run: node scripts/package-check.mjs
+      - uses: actions/upload-artifact@v4
+        with:
+          name: npm-package
+          path: ${{ steps.package.outputs.tarball }}
+      - name: Publish the tested artifact
+        env:
+          TARBALL: ${{ steps.package.outputs.tarball }}
+          NPM_TAG: ${{ steps.release.outputs.npm_tag }}
+        run: npm publish "$TARBALL" --access public --tag "$NPM_TAG" --ignore-scripts

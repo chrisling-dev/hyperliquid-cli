@@ -208,3 +208,34 @@ follow `perpDexs` order (the first/native entry is null); context updates contai
 `ctxs: [[dexName, contexts], ...]`, with `""` for the native DEX. Within each DEX,
 contexts follow that metadata's `universe` order. Match by DEX and index, not
 by flattening arrays from different venues.
+
+### Versions and releases
+
+During the rewrite, API/core and TUI PRs target `v1`. Keep `main` on the existing
+release until v1 is ready. For stable launch, merge `v1` into `main`, then use
+`main` for ongoing development.
+
+To release a milestone:
+
+1. Bump `package.json` in a PR (`1.0.0-beta.1`, then `1.0.0-beta.2`, etc.).
+   Merge beta changes into `v1`; merge stable releases into `main`.
+2. In GitHub Releases, create a matching tag such as `v1.0.0-beta.1` targeting
+   the merged commit. Mark beta releases as **pre-release**. Stable `v1.0.0`
+   must target `main` and must not be marked pre-release.
+3. Publish the GitHub Release. `release.yml` checks the version and branch
+   ancestry, runs CI, installs and smoke-tests the packed CLI, then publishes
+   that exact tarball to npm. Beta versions use `beta`; stable versions use
+   `latest`. Feature merges alone do not publish anything.
+
+One-time npm setup: in the `hyperliquid-cli` package settings, add a GitHub
+Actions trusted publisher for owner `chrisling-dev`, repository
+`hyperliquid-cli`, workflow filename `release.yml`, with no environment name.
+Allow direct publishing. This uses OIDC; no npm token secret is required.
+See [npm trusted publishing](https://docs.npmjs.com/trusted-publishers/).
+The workflow must be present in the tagged commit. Publishing a draft is the
+release trigger; merely creating a tag does not publish to npm.
+
+If checks fail before publication, fix the problem and rerun or prepare a new
+release as appropriate. Never move a published version's tag or reuse an npm
+version; ship a new patch/beta version. `pnpm build && pnpm package:check` runs
+the package smoke test locally without publishing or placing trades.
