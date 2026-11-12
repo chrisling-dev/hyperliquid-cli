@@ -2,6 +2,7 @@ import { Command, Option } from "commander"
 import { readFile } from "node:fs/promises"
 import {
   methods,
+  unwrap,
   inputFields,
   manifest,
   getMethod,
@@ -47,12 +48,15 @@ export function registerApi(program: Command) {
       for (const [key, schema] of Object.entries(inputFields(m))) {
         // Transport input flags are reserved; overlapping API fields remain available via JSON.
         if (["data", "input"].includes(key)) continue
-        cmd.addOption(
-          new Option(
-            `--${key} <value>`,
+        const base = unwrap(schema)
+        const boolean = base.type === "boolean" ||
+          (base.type === "literal" && typeof base.literal === "boolean")
+        const option = new Option(
+            `--${key} ${boolean ? "[boolean]" : "<value>"}`,
             `${description(schema) || key} (${parameterType(schema)}; ${requiredInputs(m).includes(key) ? (key === "user" ? "required unless an account is selected" : "required") : "optional or variant"})`,
-          ).argParser((value) => parseFlag(value, schema)),
-        )
+          ).argParser((value) => parseFlag(value, schema))
+        if (boolean) option.preset(true)
+        cmd.addOption(option)
       }
       if (family === "exchange") {
         if (m.vault)

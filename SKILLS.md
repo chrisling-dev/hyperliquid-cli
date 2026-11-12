@@ -8,7 +8,7 @@ Use Node 22.12+. Start with `hl --help`, then `hl info --help`, `hl ws --help`, 
 - Import read-only addresses with `hl account add --alias <name> --user <address>`.
 - Signing accounts use `--type api_wallet|master --key-env <environment-variable-name>`. Never put a private key in command-line arguments.
 - Master-only actions fail for read-only/agent accounts. A valid local key does not imply live approval.
-- Named API flags preserve field names and casing. Booleans require `true` or `false`; arrays/objects require JSON.
+- Named API flags preserve field names and casing. Boolean flags accept an optional value: `--fast` means `--fast true`; use `--fast false` to disable it. Arrays/objects require JSON.
 - Use `--data '<JSON object>'`, `--input <file>`, or `--input -` for complex inputs. Do not duplicate fields between JSON and flags.
 - Exchange inputs are action parameters, excluding the action wrapper, type, signature, and generated nonce. Inspect each method's schema rather than guessing field names or asset IDs.
 - `--dry-run` validates locally without submitting. It does not verify live authorization.

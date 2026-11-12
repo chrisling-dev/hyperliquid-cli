@@ -261,3 +261,8 @@ If checks fail before publication, fix the problem and rerun or prepare a new
 release as appropriate. Never move a published version's tag or reuse an npm
 version; ship a new patch/beta version. `pnpm build && pnpm package:check` runs
 the package smoke test locally without publishing or placing trades.
+
+Boolean API flags accept an optional value: `hl ws l2Book --coin BTC --fast`
+is equivalent to `--fast true`. Use `--fast false` for an explicit false value.
+Omitting a flag preserves the API default or required-field validation; JSON
+inputs continue to use JSON booleans.

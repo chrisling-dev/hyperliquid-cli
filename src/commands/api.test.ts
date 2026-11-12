@@ -109,3 +109,30 @@ describe("API command input boundary", () => {
     ).toBe(true)
   })
 })
+
+it.each([
+  [[], undefined],
+  [["--fast"], true],
+  [["--fast", "true"], true],
+  [["--fast", "false"], false],
+  [["--fast=false"], false],
+])("accepts optional boolean values: %j", async (flags, fast) => {
+  await run("ws", "l2Book", "--coin", "BTC", ...flags)
+  expect(stream).toHaveBeenLastCalledWith(false, "l2Book",
+    fast === undefined ? { coin: "BTC" } : { coin: "BTC", fast }, expect.any(Function))
+})
+it("handles bare booleans before another flag and rejects invalid or duplicate values", async () => {
+  await run("ws", "l2Book", "--fast", "--coin", "BTC")
+  expect(stream).toHaveBeenLastCalledWith(false, "l2Book", { coin: "BTC", fast: true }, expect.any(Function))
+  vi.mocked(stream).mockClear()
+  await expect(run("ws", "l2Book", "--coin", "BTC", "--fast", "1")).rejects.toThrow()
+  await expect(run("ws", "l2Book", "--fast", "--data", '{"coin":"BTC","fast":false}')).rejects.toThrow("both")
+  expect(stream).not.toHaveBeenCalled()
+})
+it("accepts bare required exchange booleans without defaulting omitted inputs", async () => {
+  await expect(run("exchange", "updateLeverage", "--asset", "0", "--leverage", "5", "--dry-run")).rejects.toThrow("--isCross")
+  vi.mocked(loadConfig).mockReturnValue({ testnet: false, privateKey: `0x${"1".repeat(64)}` })
+  await run("exchange", "updateLeverage", "--asset", "0", "--leverage", "5", "--isCross", "--dry-run")
+  expect(JSON.parse(vi.mocked(console.log).mock.calls.at(-1)![0]).params.isCross).toBe(true)
+  expect(execute).not.toHaveBeenCalled()
+})
