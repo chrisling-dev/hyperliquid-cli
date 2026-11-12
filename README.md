@@ -149,15 +149,22 @@ The scheduled GitHub workflow saves the report and upstream snapshot as artifact
 
 The schedule is daily at 06:19 UTC (14:19 Malaysia time). GitHub runs cron only
 from the default branch: while this workflow exists only on `v1`, it is not
-scheduled. To enable it before the stable merge, land a separate audit workflow
-on `main` that explicitly checks out `v1`; otherwise it becomes active after v1
-lands on `main`. Local `npm run api:audit` remains available meanwhile.
+scheduled. It becomes active after v1 lands on `main`; no v1 cron is needed.
+Local `npm run api:audit` remains available meanwhile.
 
-Alerts currently use GitHub Actions failure notifications; no issue, Slack, or
-email integration is configured by this repository. Enable GitHub/email under
-GitHub Settings → Notifications → Actions and select failed workflows only.
-Scheduled notifications go to the workflow's associated actor (typically its
-creator or the person who last changed the cron), not automatically everyone.
+When the audit reports drift, inconclusive coverage, or execution failure, the
+workflow creates one GitHub issue with a summary and a link to the run/artifacts.
+Later failures update that issue. A clean audit closes it; future failures reopen
+it. A stable body marker and bot author identify the issue even if its title is
+edited. Serialized runs prevent concurrent duplicate creation, and any existing
+duplicates are closed. Issue updates run only on the default branch. Subscribe
+to the tracking issue for GitHub notifications; repeated failures update its body
+without posting daily comments. Setup/build failures before the audit starts
+remain workflow failures and do not create an audit issue.
+
+For workflow failure notifications, enable GitHub/email under GitHub Settings →
+Notifications → Actions and select failed workflows only. Scheduled notifications
+go to the workflow's associated actor, not automatically everyone.
 See [GitHub Actions notifications](https://docs.github.com/en/actions/concepts/workflows-and-actions/notifications-for-workflow-runs).
 Exit 2 means drift/review required, exit 3 means inconclusive coverage, and exit
 1 means the audit could not run; inspect the report/logs to distinguish them.

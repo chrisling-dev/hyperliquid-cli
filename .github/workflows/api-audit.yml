@@ -3,8 +3,12 @@ on:
   workflow_dispatch:
   schedule:
     - cron: '19 6 * * *'
+concurrency:
+  group: hyperliquid-api-audit
+  cancel-in-progress: false
 permissions:
   contents: read
+  issues: write
 jobs:
   audit:
     runs-on: ubuntu-latest
@@ -18,6 +22,7 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - run: pnpm build
       - name: Compare live docs with mappings and reviewed snapshot
+        id: audit
         run: npm run --silent api:audit -- --save upstream-docs.json > api-audit-report.json
       - uses: actions/upload-artifact@v4
         if: always()
@@ -26,3 +31,12 @@ jobs:
           path: |
             api-audit-report.json
             upstream-docs.json
+      - name: Create or update the audit tracking issue
+        if: always() && (steps.audit.outcome == 'success' || steps.audit.outcome == 'failure') && github.ref == format('refs/heads/{0}', github.event.repository.default_branch)
+        uses: actions/github-script@v7
+        env:
+          AUDIT_OUTCOME: ${{ steps.audit.outcome }}
+        with:
+          script: |
+            const { default: sync } = await import(`${process.env.GITHUB_WORKSPACE}/scripts/audit-issue.mjs`);
+            await sync({ github, context, outcome: process.env.AUDIT_OUTCOME });
