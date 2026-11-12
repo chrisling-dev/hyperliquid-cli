@@ -2,7 +2,7 @@ import { homedir } from "node:os"
 import { join } from "node:path"
 
 // Base directory for all hl files
-export const HL_DIR = join(homedir(), ".hl")
+export const HL_DIR = process.env.HL_HOME || join(homedir(), ".hl")
 
 // Server files
 export const SERVER_SOCKET_PATH = join(HL_DIR, "server.sock")

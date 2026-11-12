@@ -1,0 +1,31 @@
+name: Dependency security
+on:
+  pull_request:
+  workflow_dispatch:
+  schedule:
+    - cron: '43 6 * * *'
+permissions:
+  contents: read
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: pnpm/action-setup@b906affcce14559ad1aafd4ab0e942779e9f58b1 # v4
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: 22
+      # Audit the lockfile without installing or executing project dependencies.
+      - name: Audit all dependencies for high and critical advisories
+        run: pnpm audit --audit-level high
+      - name: Audit runtime dependencies for moderate or worse advisories
+        if: always()
+        run: pnpm audit --prod --audit-level moderate
+  review:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/dependency-review-action@a1d282b36b6f3519aa1f3fc636f609c47dddb294 # v5
+        with:
+          fail-on-severity: high

@@ -147,7 +147,7 @@ export async function waitForApproval(
 export interface ExtraAgent {
   address: Address
   name: string
-  validUntil: number
+  validUntil: number | null
 }
 
 export async function getExtraAgents(

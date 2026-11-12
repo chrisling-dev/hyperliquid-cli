@@ -1,314 +1,138 @@
-import { describe, it, expect, vi, beforeEach, type Mock } from "vitest"
-
-// Mock context and output modules
-vi.mock("../cli/program.js", () => ({
-  getContext: vi.fn(),
-  getOutputOptions: vi.fn(() => ({ json: false })),
+import { beforeEach, describe, expect, it, vi } from "vitest"
+import { mkdtemp, writeFile, rm } from "node:fs/promises"
+import { tmpdir } from "node:os"
+import { join } from "node:path"
+vi.mock("../lib/config.js", () => ({
+  loadConfig: vi.fn(() => ({ testnet: false })),
 }))
-
-vi.mock("../cli/output.js", () => ({
-  output: vi.fn(),
-  outputError: vi.fn(),
+vi.mock("../core/client.js", () => ({ stream: vi.fn() }))
+vi.mock("../api/execution.js", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("../api/execution.js")>()),
+  execute: vi.fn(async () => ({})),
 }))
-
-import { getContext } from "../cli/program.js"
-
-describe("info commands", () => {
-  let mockInfoClient: {
-    allMids: Mock
-    meta: Mock
-    allPerpMetas: Mock
-    metaAndAssetCtxs: Mock
-    l2Book: Mock
-    clearinghouseState: Mock
-    openOrders: Mock
-  }
-
-  let mockServerClient: {
-    getPrices: Mock
-    getPerpMeta: Mock
-    getAssetCtxs: Mock
-    close: Mock
-  }
-
-  let mockContext: {
-    getPublicClient: Mock
-    getServerClient: Mock
-    getWalletAddress: Mock
-  }
-
-  beforeEach(() => {
-    vi.resetAllMocks()
-
-    mockInfoClient = {
-      allMids: vi.fn(),
-      meta: vi.fn(),
-      allPerpMetas: vi.fn(),
-      metaAndAssetCtxs: vi.fn(),
-      l2Book: vi.fn(),
-      clearinghouseState: vi.fn(),
-      openOrders: vi.fn(),
-    }
-
-    mockServerClient = {
-      getPrices: vi.fn(),
-      getPerpMeta: vi.fn(),
-      getAssetCtxs: vi.fn(),
-      close: vi.fn(),
-    }
-
-    mockContext = {
-      getPublicClient: vi.fn(() => mockInfoClient),
-      getServerClient: vi.fn(() => Promise.resolve(null)),
-      getWalletAddress: vi.fn(() => "0x1234567890abcdef1234567890abcdef12345678"),
-    }
-
-    vi.mocked(getContext).mockReturnValue(mockContext as unknown as ReturnType<typeof getContext>)
-  })
-
-  describe("meta command logic", () => {
-    it("should return meta from HTTP when no server", async () => {
-      const meta = {
-        universe: [
-          { name: "BTC", szDecimals: 4, maxLeverage: 50 },
-          { name: "ETH", szDecimals: 3, maxLeverage: 50 },
-        ],
-      }
-      mockInfoClient.meta.mockResolvedValue(meta)
-
-      const result = await mockContext.getPublicClient().meta()
-      expect(result).toEqual(meta)
-    })
-
-    it("should return meta from server cache when available", async () => {
-      const cachedMeta = {
-        universe: [{ name: "BTC", szDecimals: 4, maxLeverage: 50 }],
-      }
-      mockServerClient.getPerpMeta.mockResolvedValue({
-        data: cachedMeta,
-        cached_at: Date.now(),
-      })
-      mockContext.getServerClient.mockResolvedValue(mockServerClient)
-
-      const serverClient = await mockContext.getServerClient()
-      const { data } = await serverClient!.getPerpMeta()
-
-      expect(data).toEqual(cachedMeta)
-    })
-  })
-
-  describe("allPerpMetas command logic", () => {
-    it("should return allPerpMetas from HTTP when no server", async () => {
-      const metas = {
-        universe: [
-          { name: "BTC", szDecimals: 4, maxLeverage: 50 },
-          { name: "ETH", szDecimals: 3, maxLeverage: 50, onlyIsolated: true },
-        ],
-      }
-      mockInfoClient.allPerpMetas.mockResolvedValue(metas)
-
-      const result = await mockContext.getPublicClient().allPerpMetas()
-      expect(result).toEqual(metas)
-    })
-  })
-
-  describe("markets command logic", () => {
-    it("should combine meta and asset contexts", async () => {
-      const meta = {
-        universe: [
-          { name: "BTC", szDecimals: 4, maxLeverage: 50 },
-          { name: "ETH", szDecimals: 3, maxLeverage: 50 },
-        ],
-      }
-      const contexts = [
-        {
-          dayNtlVlm: "1000000",
-          funding: "0.0001",
-          impactPxs: null,
-          markPx: "50000",
-          midPx: "50000",
-          openInterest: "500",
-          oraclePx: "50000",
-          premium: null,
-          prevDayPx: "49000",
-          dayBaseVlm: "20",
-        },
-        {
-          dayNtlVlm: "500000",
-          funding: "0.0002",
-          impactPxs: null,
-          markPx: "3000",
-          midPx: "3000",
-          openInterest: "200",
-          oraclePx: "3000",
-          premium: null,
-          prevDayPx: "2900",
-          dayBaseVlm: "10",
-        },
-      ]
-      mockInfoClient.metaAndAssetCtxs.mockResolvedValue([meta, contexts])
-
-      const data = await mockContext.getPublicClient().metaAndAssetCtxs()
-      const [metaResult, contextsResult] = data
-
-      const markets = metaResult.universe.map(
-        (asset: { name: string; szDecimals: number; maxLeverage: number }, i: number) => ({
-          coin: asset.name,
-          szDecimals: asset.szDecimals,
-          maxLeverage: asset.maxLeverage,
-          ...contextsResult[i],
-        })
+import { createProgram } from "../cli/program.js"
+import { loadConfig } from "../lib/config.js"
+import { execute } from "../api/execution.js"
+import { stream } from "../core/client.js"
+import { inputSchema } from "../api/parameter-help.js"
+import { getMethod, requiredInputs } from "../api/registry.js"
+const run = (...args: string[]) =>
+  createProgram().parseAsync(args, { from: "user" })
+beforeEach(() => {
+  vi.clearAllMocks()
+  vi.mocked(loadConfig).mockReturnValue({ testnet: false })
+  vi.spyOn(console, "log").mockImplementation(() => {})
+})
+describe("API command input boundary", () => {
+  it.each([
+    ["info", "l2Book"],
+    ["ws", "l2Book"],
+    ["exchange", "order"],
+  ])(
+    "rejects missing %s %s inputs before account loading or execution",
+    async (family, method) => {
+      await expect(run(family, method)).rejects.toThrow(
+        "Missing required parameter",
       )
-
-      expect(markets).toHaveLength(2)
-      expect(markets[0].coin).toBe("BTC")
-      expect(markets[0].markPx).toBe("50000")
-      expect(markets[1].coin).toBe("ETH")
-      expect(markets[1].markPx).toBe("3000")
-    })
-  })
-
-  describe("book command logic", () => {
-    it("should always use HTTP for fresh order book", async () => {
-      const book = {
-        levels: [
-          [
-            { px: "50000", sz: "1.5", n: 3 },
-            { px: "49999", sz: "2.0", n: 5 },
-          ],
-          [
-            { px: "50001", sz: "1.0", n: 2 },
-            { px: "50002", sz: "3.0", n: 4 },
-          ],
-        ],
+      expect(loadConfig).not.toHaveBeenCalled()
+      expect(execute).not.toHaveBeenCalled()
+      expect(stream).not.toHaveBeenCalled()
+    },
+  )
+  it("accepts required parameters from flags, inline JSON, and a file", async () => {
+    const dir = await mkdtemp(join(tmpdir(), "hl-input-"))
+    try {
+      const file = join(dir, "input.json")
+      await writeFile(file, '{"coin":"BTC"}')
+      for (const args of [
+        ["--coin", "BTC"],
+        ["--data", '{"coin":"BTC"}'],
+        ["--input", file],
+      ]) {
+        await run("info", "l2Book", ...args)
+        expect(execute).toHaveBeenLastCalledWith(
+          expect.objectContaining({ name: "l2Book" }),
+          { coin: "BTC" },
+          { testnet: false },
+          expect.any(Object),
+        )
       }
-      mockInfoClient.l2Book.mockResolvedValue(book)
-
-      const result = await mockContext.getPublicClient().l2Book({ coin: "BTC" })
-      expect(mockInfoClient.l2Book).toHaveBeenCalledWith({ coin: "BTC" })
-      expect(result).toEqual(book)
-    })
-
-    it("should normalize coin to uppercase", async () => {
-      mockInfoClient.l2Book.mockResolvedValue({ levels: [] })
-
-      const coin = "btc"
-      await mockContext.getPublicClient().l2Book({ coin: coin.toUpperCase() })
-
-      expect(mockInfoClient.l2Book).toHaveBeenCalledWith({ coin: "BTC" })
-    })
+    } finally {
+      await rm(dir, { recursive: true, force: true })
+    }
   })
-
-  describe("positions command logic", () => {
-    it("should filter out zero-size positions", async () => {
-      const state = {
-        assetPositions: [
-          {
-            position: {
-              coin: "BTC",
-              szi: "0.5",
-              entryPx: "50000",
-              positionValue: "25000",
-              unrealizedPnl: "500",
-              leverage: { type: "cross", value: 10 },
-              liquidationPx: "45000",
-            },
-          },
-          {
-            position: {
-              coin: "ETH",
-              szi: "0", // Zero size - should be filtered
-              entryPx: "3000",
-              positionValue: "0",
-              unrealizedPnl: "0",
-              leverage: { type: "cross", value: 10 },
-              liquidationPx: null,
-            },
-          },
-        ],
-        marginSummary: { accountValue: "100000", totalMarginUsed: "25000" },
-        crossMarginSummary: {},
-      }
-      mockInfoClient.clearinghouseState.mockResolvedValue(state)
-
-      const user = mockContext.getWalletAddress()
-      const result = await mockContext.getPublicClient().clearinghouseState({ user })
-
-      const positions = result.assetPositions
-        .map((p: { position: { szi: string } }) => p.position)
-        .filter((p: { szi: string }) => parseFloat(p.szi) !== 0)
-
-      expect(positions).toHaveLength(1)
-      expect(positions[0].coin).toBe("BTC")
-    })
-
-    it("should use custom user address when provided", async () => {
-      const customAddress = "0xabcdef1234567890abcdef1234567890abcdef12"
-      mockInfoClient.clearinghouseState.mockResolvedValue({
-        assetPositions: [],
-        marginSummary: {},
-        crossMarginSummary: {},
-      })
-
-      await mockContext.getPublicClient().clearinghouseState({ user: customAddress })
-
-      expect(mockInfoClient.clearinghouseState).toHaveBeenCalledWith({
-        user: customAddress,
-      })
-    })
-
-    it("should use default wallet address when no user specified", () => {
-      const defaultAddress = mockContext.getWalletAddress()
-      expect(defaultAddress).toBe("0x1234567890abcdef1234567890abcdef12345678")
-    })
+  it("rejects invalid provided values without any request or stream", async () => {
+    await expect(
+      run("info", "l2Book", "--coin", "BTC", "--nSigFigs", "99"),
+    ).rejects.toThrow("nSigFigs")
+    await expect(run("ws", "l2Book", "--data", '{"coin":123}')).rejects.toThrow(
+      "coin",
+    )
+    expect(execute).not.toHaveBeenCalled()
+    expect(stream).not.toHaveBeenCalled()
   })
-
-  describe("orders command logic", () => {
-    it("should format open orders", async () => {
-      const orders = [
-        {
-          oid: 123,
-          coin: "BTC",
-          side: "B",
-          sz: "0.1",
-          limitPx: "50000",
-          timestamp: 1700000000000,
-        },
-        {
-          oid: 456,
-          coin: "ETH",
-          side: "A",
-          sz: "1.0",
-          limitPx: "3000",
-          timestamp: 1700000001000,
-        },
-      ]
-      mockInfoClient.openOrders.mockResolvedValue(orders)
-
-      const user = mockContext.getWalletAddress()
-      const result = await mockContext.getPublicClient().openOrders({ user })
-
-      const formatted = result.map((o: typeof orders[0]) => ({
-        oid: o.oid,
-        coin: o.coin,
-        side: o.side,
-        sz: o.sz,
-        limitPx: o.limitPx,
-        timestamp: o.timestamp,
-      }))
-
-      expect(formatted).toHaveLength(2)
-      expect(formatted[0].oid).toBe(123)
-      expect(formatted[1].coin).toBe("ETH")
+  it("allows a selected account to satisfy user but errors locally when neither is supplied", async () => {
+    await expect(run("info", "clearinghouseState")).rejects.toThrow("--user")
+    expect(execute).not.toHaveBeenCalled()
+    const user = "0x0000000000000000000000000000000000000001"
+    vi.mocked(loadConfig).mockReturnValue({
+      testnet: false,
+      walletAddress: user,
     })
-
-    it("should handle empty orders list", async () => {
-      mockInfoClient.openOrders.mockResolvedValue([])
-
-      const user = mockContext.getWalletAddress()
-      const result = await mockContext.getPublicClient().openOrders({ user })
-
-      expect(result).toHaveLength(0)
-    })
+    await run("info", "clearinghouseState")
+    expect(execute).toHaveBeenLastCalledWith(
+      expect.anything(),
+      expect.objectContaining({ user }),
+      expect.anything(),
+      expect.anything(),
+    )
   })
+  it("does not require every field of mutually exclusive action variants", () => {
+    expect(
+      requiredInputs(getMethod("exchange", "activateOutcomeDeployer")),
+    ).toEqual([])
+  })
+  it("shows parameters without SDK or request-envelope metadata", async () => {
+    await run("schema", "info", "l2Book")
+    const output = vi.mocked(console.log).mock.calls.at(-1)![0]
+    expect(output).toContain("coin  required  string")
+    expect(output).toContain("nSigFigs  optional  2 | 3 | 4 | 5")
+    expect(output).not.toContain('"request"')
+    expect(Object.keys(inputSchema(getMethod("info", "l2Book")))).toEqual([
+      "coin",
+      "nSigFigs",
+      "mantissa",
+    ])
+    await run("schema", "info", "l2Book", "--json")
+    expect(
+      JSON.parse(vi.mocked(console.log).mock.calls.at(-1)![0]).coin.required,
+    ).toBe(true)
+  })
+})
+
+it.each([
+  [[], undefined],
+  [["--fast"], true],
+  [["--fast", "true"], true],
+  [["--fast", "false"], false],
+  [["--fast=false"], false],
+])("accepts optional boolean values: %j", async (flags, fast) => {
+  await run("ws", "l2Book", "--coin", "BTC", ...flags)
+  expect(stream).toHaveBeenLastCalledWith(false, "l2Book",
+    fast === undefined ? { coin: "BTC" } : { coin: "BTC", fast }, expect.any(Function))
+})
+it("handles bare booleans before another flag and rejects invalid or duplicate values", async () => {
+  await run("ws", "l2Book", "--fast", "--coin", "BTC")
+  expect(stream).toHaveBeenLastCalledWith(false, "l2Book", { coin: "BTC", fast: true }, expect.any(Function))
+  vi.mocked(stream).mockClear()
+  await expect(run("ws", "l2Book", "--coin", "BTC", "--fast", "1")).rejects.toThrow()
+  await expect(run("ws", "l2Book", "--fast", "--data", '{"coin":"BTC","fast":false}')).rejects.toThrow("both")
+  expect(stream).not.toHaveBeenCalled()
+})
+it("accepts bare required exchange booleans without defaulting omitted inputs", async () => {
+  await expect(run("exchange", "updateLeverage", "--asset", "0", "--leverage", "5", "--dry-run")).rejects.toThrow("--isCross")
+  vi.mocked(loadConfig).mockReturnValue({ testnet: false, privateKey: `0x${"1".repeat(64)}` })
+  await run("exchange", "updateLeverage", "--asset", "0", "--leverage", "5", "--isCross", "--dry-run")
+  expect(JSON.parse(vi.mocked(console.log).mock.calls.at(-1)![0]).params.isCross).toBe(true)
+  expect(execute).not.toHaveBeenCalled()
 })

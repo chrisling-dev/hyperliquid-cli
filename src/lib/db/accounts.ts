@@ -4,7 +4,7 @@ import { getDb } from "./index.js"
 /**
  * Account types
  */
-export type AccountType = "readonly" | "api_wallet"
+export type AccountType = "readonly" | "api_wallet" | "master"
 export type AccountSource = "cli_import" // Future: "web", etc.
 
 /**
@@ -74,10 +74,18 @@ export interface CreateAccountInput {
  * Create a new account
  */
 export function createAccount(input: CreateAccountInput): Account {
+  return getDb()
+    .transaction(() => createAccountTransaction(input))
+    .immediate()
+}
+
+function createAccountTransaction(input: CreateAccountInput): Account {
   const db = getDb()
 
   // If this is the first account or setAsDefault is true, make it default
-  const accountCount = db.prepare("SELECT COUNT(*) as count FROM accounts").get() as { count: number }
+  const accountCount = db
+    .prepare("SELECT COUNT(*) as count FROM accounts")
+    .get() as { count: number }
   const shouldBeDefault = accountCount.count === 0 || input.setAsDefault
 
   // If setting as default, unset current default first
@@ -85,7 +93,9 @@ export function createAccount(input: CreateAccountInput): Account {
     db.prepare("UPDATE accounts SET is_default = 0 WHERE is_default = 1").run()
   }
 
-  const result = db.prepare(`
+  const result = db
+    .prepare(
+      `
     INSERT INTO accounts (
       alias,
       user_address,
@@ -95,15 +105,17 @@ export function createAccount(input: CreateAccountInput): Account {
       api_wallet_public_key,
       is_default
     ) VALUES (?, ?, ?, ?, ?, ?, ?)
-  `).run(
-    input.alias,
-    input.userAddress,
-    input.type,
-    input.source || "cli_import",
-    input.apiWalletPrivateKey || null,
-    input.apiWalletPublicKey || null,
-    shouldBeDefault ? 1 : 0
-  )
+  `,
+    )
+    .run(
+      input.alias,
+      input.userAddress,
+      input.type,
+      input.source || "cli_import",
+      input.apiWalletPrivateKey || null,
+      input.apiWalletPublicKey || null,
+      shouldBeDefault ? 1 : 0,
+    )
 
   return getAccountById(Number(result.lastInsertRowid))!
 }
@@ -113,7 +125,9 @@ export function createAccount(input: CreateAccountInput): Account {
  */
 export function getAccountById(id: number): Account | null {
   const db = getDb()
-  const row = db.prepare("SELECT * FROM accounts WHERE id = ?").get(id) as AccountRow | undefined
+  const row = db.prepare("SELECT * FROM accounts WHERE id = ?").get(id) as
+    | AccountRow
+    | undefined
   return row ? rowToAccount(row) : null
 }
 
@@ -122,7 +136,9 @@ export function getAccountById(id: number): Account | null {
  */
 export function getAccountByAlias(alias: string): Account | null {
   const db = getDb()
-  const row = db.prepare("SELECT * FROM accounts WHERE alias = ?").get(alias) as AccountRow | undefined
+  const row = db
+    .prepare("SELECT * FROM accounts WHERE alias = ?")
+    .get(alias) as AccountRow | undefined
   return row ? rowToAccount(row) : null
 }
 
@@ -131,7 +147,9 @@ export function getAccountByAlias(alias: string): Account | null {
  */
 export function getDefaultAccount(): Account | null {
   const db = getDb()
-  const row = db.prepare("SELECT * FROM accounts WHERE is_default = 1").get() as AccountRow | undefined
+  const row = db
+    .prepare("SELECT * FROM accounts WHERE is_default = 1")
+    .get() as AccountRow | undefined
   return row ? rowToAccount(row) : null
 }
 
@@ -140,7 +158,9 @@ export function getDefaultAccount(): Account | null {
  */
 export function getAllAccounts(): Account[] {
   const db = getDb()
-  const rows = db.prepare("SELECT * FROM accounts ORDER BY is_default DESC, created_at ASC").all() as AccountRow[]
+  const rows = db
+    .prepare("SELECT * FROM accounts ORDER BY is_default DESC, created_at ASC")
+    .all() as AccountRow[]
   return rows.map(rowToAccount)
 }
 
@@ -148,6 +168,12 @@ export function getAllAccounts(): Account[] {
  * Set an account as default by alias
  */
 export function setDefaultAccount(alias: string): Account {
+  return getDb()
+    .transaction(() => setDefaultTransaction(alias))
+    .immediate()
+}
+
+function setDefaultTransaction(alias: string): Account {
   const db = getDb()
 
   // Check if account exists
@@ -160,7 +186,9 @@ export function setDefaultAccount(alias: string): Account {
   db.prepare("UPDATE accounts SET is_default = 0 WHERE is_default = 1").run()
 
   // Set new default
-  db.prepare("UPDATE accounts SET is_default = 1, updated_at = strftime('%s', 'now') WHERE alias = ?").run(alias)
+  db.prepare(
+    "UPDATE accounts SET is_default = 1, updated_at = strftime('%s', 'now') WHERE alias = ?",
+  ).run(alias)
 
   return getAccountByAlias(alias)!
 }
@@ -169,6 +197,12 @@ export function setDefaultAccount(alias: string): Account {
  * Delete an account by alias
  */
 export function deleteAccount(alias: string): boolean {
+  return getDb()
+    .transaction(() => deleteAccountTransaction(alias))
+    .immediate()
+}
+
+function deleteAccountTransaction(alias: string): boolean {
   const db = getDb()
   const account = getAccountByAlias(alias)
   if (!account) {
@@ -180,9 +214,13 @@ export function deleteAccount(alias: string): boolean {
 
   // If deleted account was default, set the first remaining account as default
   if (wasDefault) {
-    const firstAccount = db.prepare("SELECT * FROM accounts ORDER BY created_at ASC LIMIT 1").get() as AccountRow | undefined
+    const firstAccount = db
+      .prepare("SELECT * FROM accounts ORDER BY created_at ASC LIMIT 1")
+      .get() as AccountRow | undefined
     if (firstAccount) {
-      db.prepare("UPDATE accounts SET is_default = 1 WHERE id = ?").run(firstAccount.id)
+      db.prepare("UPDATE accounts SET is_default = 1 WHERE id = ?").run(
+        firstAccount.id,
+      )
     }
   }
 
@@ -204,7 +242,7 @@ export function isAliasTaken(alias: string): boolean {
 export function updateAccountApiWallet(
   alias: string,
   apiWalletPrivateKey: Hex,
-  apiWalletPublicKey: Address
+  apiWalletPublicKey: Address,
 ): Account {
   const db = getDb()
 
@@ -213,7 +251,8 @@ export function updateAccountApiWallet(
     throw new Error(`Account with alias "${alias}" not found`)
   }
 
-  db.prepare(`
+  db.prepare(
+    `
     UPDATE accounts
     SET
       api_wallet_private_key = ?,
@@ -221,7 +260,8 @@ export function updateAccountApiWallet(
       type = 'api_wallet',
       updated_at = strftime('%s', 'now')
     WHERE alias = ?
-  `).run(apiWalletPrivateKey, apiWalletPublicKey, alias)
+  `,
+  ).run(apiWalletPrivateKey, apiWalletPublicKey, alias)
 
   return getAccountByAlias(alias)!
 }
@@ -231,6 +271,8 @@ export function updateAccountApiWallet(
  */
 export function getAccountCount(): number {
   const db = getDb()
-  const result = db.prepare("SELECT COUNT(*) as count FROM accounts").get() as { count: number }
+  const result = db.prepare("SELECT COUNT(*) as count FROM accounts").get() as {
+    count: number
+  }
   return result.count
 }

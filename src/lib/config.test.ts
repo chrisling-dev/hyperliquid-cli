@@ -1,29 +1,36 @@
-import { describe, it, expect, beforeEach, afterEach, vi } from "vitest"
+import { describe, it, expect, vi, beforeEach } from "vitest"
+vi.mock("./db/index.js", () => ({
+  getAccountByAlias: vi.fn(),
+  getDefaultAccount: vi.fn(),
+}))
+import { getAccountByAlias, getDefaultAccount } from "./db/index.js"
 import { loadConfig } from "./config.js"
-
-describe("loadConfig", () => {
-  const originalEnv = process.env
-
-  beforeEach(() => {
-    vi.resetModules()
-    process.env = { ...originalEnv }
+beforeEach(() => {
+  vi.resetAllMocks()
+  vi.stubEnv("HYPERLIQUID_PRIVATE_KEY", "")
+  vi.stubEnv("HYPERLIQUID_WALLET_ADDRESS", "")
+})
+describe("account selection", () => {
+  it("errors for explicit missing aliases rather than silently using another account", () => {
+    expect(() => loadConfig(false, "missing")).toThrow("not found")
+    expect(getDefaultAccount).not.toHaveBeenCalled()
   })
-
-  afterEach(() => {
-    process.env = originalEnv
+  it("selects explicit alias before the default account", () => {
+    vi.mocked(getAccountByAlias).mockReturnValue({
+      alias: "selected",
+      type: "readonly",
+      userAddress: "0x123",
+      apiWalletPrivateKey: null,
+    } as never)
+    expect(loadConfig(true, "selected")).toMatchObject({
+      testnet: true,
+      account: { alias: "selected", type: "readonly" },
+    })
   })
-
-  it("should return testnet: false when called with false", () => {
-    delete process.env.HYPERLIQUID_PRIVATE_KEY
-    delete process.env.HYPERLIQUID_WALLET_ADDRESS
-    const config = loadConfig(false)
-    expect(config.testnet).toBe(false)
-  })
-
-  it("should return testnet: true when called with true", () => {
-    delete process.env.HYPERLIQUID_PRIVATE_KEY
-    delete process.env.HYPERLIQUID_WALLET_ADDRESS
-    const config = loadConfig(true)
-    expect(config.testnet).toBe(true)
-  })
+  it("allows public reads with no configured account", () =>
+    expect(loadConfig(false)).toMatchObject({
+      testnet: false,
+      privateKey: undefined,
+      walletAddress: undefined,
+    }))
 })

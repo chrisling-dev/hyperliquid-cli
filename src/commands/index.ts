@@ -1,16 +1,11 @@
 import type { Command } from "commander"
 import { registerAccountCommands } from "./account/index.js"
-import { registerMarketsCommands } from "./markets/index.js"
-import { registerAssetCommands } from "./asset/index.js"
-import { registerOrderCommands } from "./order/index.js"
-import { registerServerCommands } from "./server.js"
+import { registerApi } from "./api.js"
+import { registerCore } from "./core.js"
 import { registerUpgradeCommand } from "./upgrade.js"
-
 export function registerCommands(program: Command): void {
   registerAccountCommands(program)
-  registerMarketsCommands(program)
-  registerAssetCommands(program)
-  registerOrderCommands(program)
-  registerServerCommands(program)
+  registerApi(program)
+  registerCore(program)
   registerUpgradeCommand(program)
 }
