@@ -14,12 +14,12 @@ jobs:
       contents: read
       id-token: write
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
           ref: ${{ github.event.release.tag_name }}
           fetch-depth: 0
-      - uses: pnpm/action-setup@v4
-      - uses: actions/setup-node@v4
+      - uses: pnpm/action-setup@b906affcce14559ad1aafd4ab0e942779e9f58b1 # v4
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
           node-version: 22
           cache: pnpm
@@ -28,6 +28,8 @@ jobs:
       - name: Validate version, release channel, and branch ancestry
         id: release
         run: node scripts/release-check.mjs
+      - run: pnpm audit --audit-level high
+      - run: pnpm audit --prod --audit-level moderate
       - run: pnpm install --frozen-lockfile
       - run: pnpm typecheck && pnpm lint && pnpm test && pnpm build
       - run: pnpm api:manifest --check
@@ -35,7 +37,7 @@ jobs:
       - name: Pack and test the installed artifact
         id: package
         run: node scripts/package-check.mjs
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: npm-package
           path: ${{ steps.package.outputs.tarball }}

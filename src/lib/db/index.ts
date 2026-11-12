@@ -1,5 +1,6 @@
+import { secureStateDirectory, secureStateFile } from "../private-state.js"
 import Database from "better-sqlite3"
-import { mkdirSync, chmodSync, existsSync } from "node:fs"
+import { chmodSync, existsSync } from "node:fs"
 import { HL_DIR, DB_PATH } from "../paths.js"
 
 let db: Database.Database | null = null
@@ -13,7 +14,9 @@ export function getDb(): Database.Database {
   }
 
   // Ensure the directory exists
-  mkdirSync(HL_DIR, { recursive: true, mode: 0o700 })
+  secureStateDirectory(HL_DIR)
+  secureStateFile(DB_PATH)
+  secureStateFile(`${DB_PATH}.pre-v1`)
 
   db = new Database(DB_PATH)
   chmodSync(DB_PATH, 0o600)

@@ -2,7 +2,6 @@
 import { createServer, type Socket } from "node:net"
 import {
   appendFileSync,
-  mkdirSync,
   writeFileSync,
   unlinkSync,
   existsSync,
@@ -11,10 +10,11 @@ import {
 import { WebSocketTransport } from "@nktkas/hyperliquid"
 import { Broker, sdkSubscribe } from "./broker.js"
 import { corePaths, PROTOCOL } from "./paths.js"
+import { secureStateDirectory } from "../lib/private-state.js"
 import { HL_DIR } from "../lib/paths.js"
 const testnet = process.argv.includes("--testnet")
 const paths = corePaths(testnet)
-mkdirSync(HL_DIR, { recursive: true, mode: 0o700 })
+secureStateDirectory(HL_DIR)
 const log = (error: unknown) =>
   appendFileSync(paths.log, `${new Date().toISOString()} ${String(error)}\n`, {
     mode: 0o600,

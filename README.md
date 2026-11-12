@@ -65,7 +65,7 @@ Select an account globally with `--account <alias>`; otherwise the saved default
 
 Permissions are per action, not inferred from its signing scheme. Some explicitly agent-authorized actions, such as `agentSendAsset` and `cDeposit2`, can move funds within the restrictions imposed by Hyperliquid. A local account label does not grant permissions: writes check the live signer role before submission. Revoked or wrong-network agents fail.
 
-Account keys remain stored **unencrypted** in `~/.hl/hl.db`, with file mode `0600`. The directory is created with `0700`. `HL_HOME` overrides the data directory. The first v1 database migration creates `hl.db.pre-v1` and retains existing accounts.
+Account keys remain stored **unencrypted** in `~/.hl/hl.db`, with file mode `0600`. The directory is enforced as `0700`, including existing directories. Database files and migration backups must be regular files owned by the current user; symlinked state directories/files are rejected. `HL_HOME` overrides the data directory. The first v1 database migration creates `hl.db.pre-v1` and retains existing accounts.
 
 Errors are readable text on stderr by default, with a red label and cyan hint in terminals. Use `--json` for structured errors. Redirected output and `NO_COLOR` disable colors.
 
@@ -270,3 +270,39 @@ inputs continue to use JSON booleans.
 `hl capabilities` lists method names grouped by `info`, `ws`, and `exchange`.
 Use `hl capabilities --json` for the full manifest, or `hl schema <family> <method>`
 for the parameters of one method.
+
+Core inherits only runtime paths, locale, proxy, and certificate settings; wallet keys
+and other arbitrary environment variables are not forwarded to the detached process.
+
+### Dependency security maintenance
+
+Dependabot checks npm updates daily and GitHub Actions weekly on the default
+branch. Routine npm version updates wait seven days; known-vulnerability security
+updates do not use that cooldown. Updates arrive as reviewable PRs and are not
+automatically merged. Signing SDK updates also require reviewing/regenerating
+`api-manifest.json` and testing signing behavior.
+
+`Dependency security` runs on PRs and daily on `main`. It audits the lockfile
+without installing project dependencies, fails on high/critical advisories in
+any scope and moderate-or-worse runtime advisories, and reviews dependency
+changes in PRs. The same audit thresholds gate npm release publication. GitHub
+Actions are pinned to commit SHAs and updated through Dependabot.
+
+GitHub Dependabot alerts/security updates provide advisory alerts and patch PRs;
+configure personal security-alert notifications in GitHub. The daily audit also
+uses Actions failure notifications. Schedules and Dependabot configuration take
+effect after these files reach the default branch. Make the security check jobs
+required in branch protection to enforce them on merges.
+
+Advisory scans and cooldowns cannot prove a new package is non-malicious. Review
+upstream changes, especially signing, native addons, and install scripts; build
+and test without wallet credentials. Do not automatically run newly proposed
+package updates in a terminal containing production wallet keys. If a compromised
+package executes with access to a key, patching alone does not revoke that key:
+revoke affected agent credentials and handle master-wallet exposure separately.
+
+Security review (2026-11-12): runtime dependency audit is clean after updating
+viem/ws. Development tooling retains a moderate minimatch pattern-amplification
+advisory through typescript-eslint; it is not shipped in the CLI package. This
+review is a focused code/dependency review, not a penetration test or a guarantee
+against undisclosed upstream compromises.

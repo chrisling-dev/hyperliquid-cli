@@ -1,3 +1,5 @@
+import { coreEnvironment } from "./environment.js"
+import { secureStateDirectory } from "../lib/private-state.js"
 import { createConnection, type Socket } from "node:net"
 import { spawn } from "node:child_process"
 import {
@@ -132,7 +134,7 @@ async function startCore(testnet: boolean): Promise<void> {
     unlinkSync(paths.pid)
   }
   if (existsSync(paths.socket)) unlinkSync(paths.socket)
-  mkdirSync(HL_DIR, { recursive: true, mode: 0o700 })
+  secureStateDirectory(HL_DIR)
   const source = fileURLToPath(new URL("./index.js", import.meta.url))
   const entry = existsSync(source) ? source : source.replace(/\.js$/, ".ts")
   const args = [
@@ -143,7 +145,7 @@ async function startCore(testnet: boolean): Promise<void> {
   const child = spawn(process.execPath, args, {
     detached: true,
     stdio: "ignore",
-    env: process.env,
+    env: coreEnvironment(),
   })
   child.on("error", (error) => appendFileSync(paths.log, `${error.message}\n`))
   child.unref()
@@ -155,7 +157,7 @@ async function startCore(testnet: boolean): Promise<void> {
   throw new Error(`Core did not start; inspect ${paths.log}`)
 }
 export async function ensureCore(testnet: boolean): Promise<void> {
-  mkdirSync(HL_DIR, { recursive: true, mode: 0o700 })
+  secureStateDirectory(HL_DIR)
   const lock = `${corePaths(testnet).socket}.start-lock`
   const deadline = Date.now() + 15000
   while (true) {
